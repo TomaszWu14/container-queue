@@ -1,0 +1,46 @@
+# Zależności bezpośrednie backendu (progi wersji). NIE instaluj z tego pliku —
+# instaluj z wygenerowanego locka requirements.txt (== + hashe, pip --require-hashes).
+# Po zmianie tego pliku odśwież lock (z katalogu backend/; --upgrade = najnowsze wersje w progach,
+# bez niego uv trzyma wersje z obecnego locka):
+#   uv pip compile --universal --python-version 3.12 --generate-hashes [--upgrade] requirements.in -o requirements.txt
+# Test tests/test_dependency_lock.py pilnuje zgodności locka z tym plikiem.
+# Narzędzia testów i lintu (pytest, ruff) → requirements-dev.in — nie trafiają do obrazu.
+fastapi>=0.141.1
+uvicorn[standard]>=0.53.0
+sqlalchemy>=2.0.54
+alembic>=1.20.0
+psycopg2-binary>=2.9.13
+pydantic>=2.13.5
+pydantic-settings>=2.15.0
+PyJWT>=2.14.0
+# hashowanie haseł: czyste bcrypt (bez passlib — nierozwijany). Format $2b$ jest
+# zgodny wstecz, więc istniejące hasła działają bez migracji danych.
+bcrypt>=5.0.0
+python-multipart>=0.0.32
+httpx>=0.28.1
+# szablony maili awizacji do spedycji (PL/EN, app/templates/avizo)
+jinja2>=3.1.6
+openpyxl>=3.1.5
+# Wywołania-DLT: autoryzacja Power BI (service principal / delegated device-code).
+# Importowany leniwie — reszta aplikacji działa bez tej zależności.
+msal>=1.39.0
+# szyfrowanie cache MSAL (refresh token) w DB — Fernet
+cryptography>=50.0.1
+sentry-sdk[fastapi]>=2.69.2
+# ekstrakcja tekstu z PDF (fallback OCR #52 — regex na numer kontenera, brak AI SDK w repo)
+pdfminer.six>=20260107
+# Faktury (CIPL) → Excel: tabele pozycji z warstwy tekstowej PDF (bez OCR) + cięcie
+# PDF-zestawu na dokumenty (pypdf — czysty Python, bez binarnych zależności)
+pdfplumber>=0.11.10
+pypdf>=6.19.0
+# OCR skanów faktur (binarka tesseract-ocr + pol/eng w obrazie Dockera; render stron
+# robi pypdfium2, który przychodzi z pdfplumber)
+pytesseract>=0.3.13
+# ML modułu faktur: sugestie REF (TF-IDF + cosinus) i klasyfikator typu dokumentu
+scikit-learn>=1.9.1
+# pakowanie 3D kontenera (wizualizacja wypełnienia — mieszane resztki po blokach mono-SKU)
+py3dbp>=1.1.2
+tzdata
+# poczekalnia dokumentów: .msg z Outlooka (załączniki) i zdjęcia HEIC z telefonu → PDF (Pillow)
+extract-msg>=0.56.1
+pillow-heif>=1.8.0

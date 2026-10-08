@@ -1,0 +1,25 @@
+/* Pełna karta kontenera jako osobny ekran (2026-09-30). Nagłówek i zakładki reużywają klas
+   szuflady kolejki (.kq-dr-*), tu tylko układ strony. Kolory wyłącznie z tokenów. */
+.ct-page-nav { display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-2) 0; }
+.ct-page-nav .btn { display: inline-flex; align-items: center; gap: var(--sp-1); }
+
+.ct-head { display: flex; flex-direction: column; gap: var(--sp-2); }
+.ct-head-main { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.ct-head-id { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1 1 420px; min-width: 0; }
+.ct-head h1.kq-dr-no { margin: 0; font-size: var(--fs-xl); line-height: 1.2; }
+.ct-head .kq-dr-stages { max-width: 640px; }
+
+.kq-dr-tabs.ct-tabs { margin: var(--sp-3) 0; padding: 0; }
+.kq-dr-tabs.ct-tabs button { font-size: 14px; padding: 10px 14px; }
+
+/* Szczegóły: 1 kolumna na telefonie, 2 od ~900 px, 3 na szerokim ekranie; szerokie panele na całą szerokość */
+.ct-details, .ct-docs { display: grid; gap: var(--sp-4); grid-template-columns: minmax(0, 1fr); align-items: start; }
+.ct-details > .panel, .ct-details > div > .panel, .ct-docs > .panel, .ct-docs > div > .panel { margin: 0; }
+.ct-details > :empty { display: none; }
+@media (min-width: 900px) {
+  .ct-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ct-details > .ct-wide { grid-column: 1 / -1; }
+}
+@media (min-width: 1500px) {
+  .ct-details { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

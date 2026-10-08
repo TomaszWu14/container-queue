@@ -1,0 +1,23 @@
+<div style="font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2937">
+<p>Dzień dobry,</p>
+{% if kind == "stage1" %}
+<p>prosimy o potwierdzenie terminów dostaw poniższych kontenerów (zlecenie awizacji nr {{ request_id }}, {{ company }}).
+Dla każdego kontenera możesz potwierdzić termin, zaproponować inny albo zgłosić problem.</p>
+{% elif kind == "rejected" %}
+<p>nie możemy zatwierdzić przesłanego potwierdzenia dostaw (zlecenie nr {{ request_id }}, {{ company }}).</p>
+<p style="background:#fef3c7;padding:10px 14px;border-radius:6px"><b>Komentarz:</b> {{ comment }}</p>
+<p>Prosimy o ponowne wypełnienie formularza — poprzedni link jest już nieaktywny.</p>
+{% else %}
+<p>dziękujemy — terminy dostaw zostały zatwierdzone (zlecenie nr {{ request_id }}, {{ company }}).
+Prosimy o podanie danych kierowców dla poniższych kontenerów.</p>
+{% endif %}
+<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px">
+<tr style="background:#1f4e79;color:#fff;font-weight:bold"><td>Kontener</td><td>Statek</td><td>Termin</td><td>Magazyn</td></tr>
+{% for c in containers %}<tr><td><b>{{ c.no }}</b></td><td>{{ c.vessel }}</td><td>{{ c.date }}{% if c.slot %} {{ c.slot }}{% endif %}</td><td>{{ c.warehouse }}</td></tr>
+{% endfor %}</table>
+{% if note %}<p><b>Uwagi:</b> {{ note }}</p>{% endif %}
+<p style="margin:22px 0"><a href="{{ link }}" style="background:#0b5fff;color:#fff;padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:bold">{% if kind == "stage2" %}Podaj dane kierowców{% else %}Potwierdź dostawy{% endif %}</a></p>
+<p style="color:#64748b;font-size:12px">Link jest jednorazowy i ważny do {{ expires }}. Nie przekazuj go dalej.
+W razie pytań odpowiedz na tę wiadomość{% if operator_email %} ({{ operator_email }}){% endif %}.</p>
+<p>Pozdrawiamy,<br>{{ operator }}</p>
+</div>

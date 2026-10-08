@@ -1,0 +1,4 @@
+# Znany dryf schematu: modele vs `alembic upgrade head` na PostgreSQL 16 (scripts/db_drift.py).
+# Stan na 2026-09-28 (audyt DB-004). Lista może tylko MALEĆ: naprawiając dryf migracją, usuń
+# linię. Nowej różnicy NIE dopisuj tutaj — dopisz migrację.
+# 2026-09-28: wszystkie 28 pozycji naprawione migracją drift001 (DB-003) — baseline pusty.

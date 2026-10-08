@@ -1,0 +1,18 @@
+/* Warstwy Tailwind v4. Migracja etapami: preflight (reset bazowy) NIE jest importowany,
+   by nie kolidował z istniejącym styles.css. W v4 wyłącza się go właśnie tak — pomijając
+   import "tailwindcss/preflight.css" — a nie przez corePlugins (tego klucza v4 nie zna).
+   UWAGA: nie zamieniaj tego na @import "tailwindcss" — to wciągnie preflight. */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* v4 nie wczytuje tailwind.config.js sam z siebie — trzeba go wskazać jawnie.
+   Stąd biorą się mapowania kolorów na tokeny CSS (text-accent, bg-panel, ...). */
+@config '../tailwind.config.js';
+
+/* dist jest commitowany (serwuje go backend), więc git go nie ignoruje — a v4 skanuje
+   jako źródła wszystko, czego git nie ignoruje, DOPISUJĄC to do content z @config.
+   Bez tej linii każdy build wciąga klasy z poprzedniego bundla: usunięte utility
+   (np. shadow-sm) wracają jak zombie i CSS puchnie z buildu na build. */
+@source not '../dist';

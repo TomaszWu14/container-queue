@@ -1,0 +1,56 @@
+/* Administracja → Kolory i menu → Moje kolory (pages/admin/colors/). Tylko tokeny — podgląd dostaje
+   wartości edytowanego motywu jako zmienne inline na .colprev, więc te same var(--…) pokazują szkic. */
+.colors-admin { display: grid; gap: var(--sp-3); }
+.colors-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: var(--sp-5); align-items: start; }
+@media (max-width: 960px) { .colors-layout { grid-template-columns: minmax(0, 1fr); } }
+.colors-groups { display: grid; gap: var(--sp-4); }
+.colors-group h4, .colors-side h4 {
+  margin: 0 0 var(--sp-2); font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+}
+.colors-token { display: grid; gap: var(--sp-2); }
+.colors-swatch-btn {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2);
+  width: 100%; text-align: left; font: inherit; color: var(--text); background: var(--panel);
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 4px 8px; min-height: var(--control-h-sm); cursor: pointer;
+}
+.colors-swatch-btn:hover { border-color: var(--border-strong); }
+.colors-swatch-btn[aria-expanded='true'] { border-color: var(--accent); }
+.colors-swatch-btn code { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+.colors-swatch { width: 28px; height: 20px; border-radius: var(--r-sm); border: 1px solid var(--border-strong); }
+.colors-side { display: grid; gap: var(--sp-2); position: sticky; top: var(--sp-3); }
+.colors-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--fs-sm); }
+.colors-checks .ok { color: var(--success-ink); }
+.colors-checks .warn { color: var(--danger-ink); }
+
+.colpick { display: grid; gap: var(--sp-2); padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface-2); }
+.colpick-grid { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 2px; max-width: 480px; }
+.colpick-grid button { aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid transparent; border-radius: 2px; cursor: pointer; }
+.colpick-grid button:hover { outline: 2px solid var(--text); outline-offset: 0; }
+.colpick-grid button.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.colpick-grid button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.colpick-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.colpick-row input:not([type='color']) { width: 9ch; font-family: var(--font-mono); }
+.colpick-row input[aria-invalid='true'] { border-color: var(--danger-ink); }
+.colpick-row input[type='color'] { width: 36px; height: 28px; padding: 0; border: 1px solid var(--border); background: none; }
+
+/* podgląd — wycinek kolejki w barwach szkicu */
+.colprev { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; font-size: var(--fs-xs); }
+.colprev-chrome { display: flex; gap: var(--sp-3); padding: 6px 10px; background: var(--chrome); color: var(--chrome-text); }
+.colprev-chrome span { opacity: .8; }
+.colprev-tabs { display: flex; gap: var(--sp-3); padding: 6px 10px; background: var(--panel); border-bottom: 1px solid var(--border); color: var(--text-muted); }
+.colprev-tabs b { color: var(--accent-ink); border-bottom: 2px solid var(--accent); }
+.colprev table { width: 100%; border-collapse: collapse; }
+.colprev td { padding: 0 8px; height: 26px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.colprev .mono { font-family: var(--font-mono); }
+.colprev-day td { background: var(--surface-2); font-weight: 600; }
+.colprev-row.wh-dlt td { background: var(--kq-row-dlt); }
+.colprev-row.wh-acme td { background: var(--kq-row-acme); }
+.colprev-row.wh-none td { background: var(--kq-row-none); }
+.colprev-row.wh-dlt td:first-child { box-shadow: inset 3px 0 var(--wh-dlt-bar); }
+.colprev-row.wh-acme td:first-child { box-shadow: inset 3px 0 var(--wh-acme-bar); }
+.colprev-row.wh-none td:first-child { box-shadow: inset 3px 0 var(--wh-none-bar); }
+.colprev-row.wh-dlt:hover td { background: var(--kq-row-dlt-hover); }
+.colprev-row.wh-acme:hover td { background: var(--kq-row-acme-hover); }
+.colprev-row.wh-dlt .colprev-wh { color: var(--wh-dlt-ink); font-weight: 700; }
+.colprev-row.wh-acme .colprev-wh { color: var(--wh-acme-ink); font-weight: 700; }
+.colprev-muted { color: var(--text-muted); }

@@ -1,0 +1,63 @@
+/* Kafelki dokumentów dostawy (DocumentTiles.tsx, wzór: compare dostawa_detail).
+   Kolor typu = tokeny etapów (--st-*), kropka stanu = tokeny semantyczne — działają też w dark. */
+.dt-panel .dt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+.dt-missing { color: var(--danger-ink); font-weight: 600; font-size: var(--fs-sm); }
+.dt-groups { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.dt-group { display: flex; align-items: stretch; gap: 0; padding: var(--sp-2);
+            border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+.dt-cell { display: inline-flex; align-items: center; }
+.dt-link { color: var(--muted); margin: 0 6px; flex: none; }
+.dt-tile { position: relative; width: 150px; border-radius: 10px; }
+.dt-main:disabled { cursor: default; opacity: 1; color: inherit; }   /* pusty kafelek: tylko stan */
+.dt-main { display: grid; grid-template-columns: auto 1fr; grid-template-areas:
+  "icon led" "code code" "name name" "file file";
+  gap: 2px 8px; width: 100%; padding: 8px; border: 0; border-radius: 10px; background: none;
+  text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.dt-main:hover:not(:disabled) { background: var(--soft); }
+.dt-main:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dt-icon { grid-area: icon; display: inline-flex; align-items: center; justify-content: center;
+           width: 40px; height: 40px; border-radius: 10px; }
+.dt-led { grid-area: led; justify-self: end; width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+.dt-led.st-present { background: var(--info-ink); }
+.dt-led.st-ok { background: var(--success-ink); }
+.dt-led.st-warn { background: var(--warning-ink); }
+.dt-led.st-bad { background: var(--danger-ink); }
+.dt-code { grid-area: code; margin-top: 4px; font-family: var(--font-mono); font-size: 13px; }
+.dt-name { grid-area: name; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.dt-file { grid-area: file; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-more { color: var(--accent-ink); font-weight: 700; }
+.dt-manage, .link-btn { padding: 0 8px; border: 0; background: none; color: var(--accent-ink); font: inherit;
+                        font-size: 12px; cursor: pointer; text-decoration: underline; }
+.dt-list { list-style: none; margin: 2px 0 0; padding: 0 8px; font-size: 12px; }
+/* kolor typu: ikona i kod w barwie etapu (różne dla każdego dokumentu) */
+.dt-PI { --dt-bg: var(--st-W_PRODUKCJI-bg); --dt-ink: var(--st-W_PRODUKCJI-ink); }
+.dt-CI { --dt-bg: var(--st-AWIZOWANY-bg); --dt-ink: var(--st-AWIZOWANY-ink); }
+.dt-PL { --dt-bg: var(--st-ODPRAWA-bg); --dt-ink: var(--st-ODPRAWA-ink); }
+.dt-BL { --dt-bg: var(--st-W_PORCIE-bg); --dt-ink: var(--st-W_PORCIE-ink); }
+.dt-SAD_DRAFT { --dt-bg: var(--st-W_DOSTAWIE-bg); --dt-ink: var(--st-W_DOSTAWIE-ink); }
+.dt-SAD_PZ { --dt-bg: var(--st-W_TRANSPORCIE-bg); --dt-ink: var(--st-W_TRANSPORCIE-ink); }
+.dt-SAD_PW { --dt-bg: var(--st-DOSTARCZONY-bg); --dt-ink: var(--st-DOSTARCZONY-ink); }
+.dt-icon { background: var(--dt-bg); color: var(--dt-ink); }
+.dt-code { color: var(--dt-ink); }
+/* kompakt (szuflada): małe kwadraciki ze skrótem; brak = przygaszony, brak wymagany = czerwona ramka */
+.dt-compact { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.dt-sq { position: relative; display: inline-flex; align-items: center; justify-content: center;
+         min-width: 26px; height: 22px; padding: 0 4px; border-radius: 5px; font-family: var(--font-mono);
+         font-size: 11px; font-weight: 700; background: var(--dt-bg); color: var(--dt-ink); }
+.dt-sq.st-none { opacity: .45; }
+.dt-sq.miss { opacity: 1; box-shadow: inset 0 0 0 1.5px var(--danger-ink); }
+.dt-sq::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%;
+                background: transparent; box-shadow: 0 0 0 1.5px var(--panel); }
+.dt-sq.st-present::after { background: var(--info-ink); }
+.dt-sq.st-ok::after { background: var(--success-ink); }
+.dt-sq.st-warn::after { background: var(--warning-ink); }
+.dt-sq.st-bad::after { background: var(--danger-ink); }
+.dt-compact-btn { display: block; margin: 6px 0 2px; padding: 2px; border: 0; border-radius: 6px; background: none; cursor: pointer; }
+.dt-compact-btn:hover { background: var(--soft); }
+.dt-compact-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 700px) { .dt-tile { width: 128px; } }
+/* mini (wiersz kolejki): mniejsze kwadraciki + znacznik poczekalni */
+.dt-mini { flex-wrap: nowrap; gap: 2px; align-items: center; }
+.dt-mini .dt-sq { min-width: 0; height: 16px; padding: 0 3px; font-size: 9px; border-radius: 3px; }
+.dt-mini .dt-sq::after { width: 5px; height: 5px; top: -1px; right: -1px; }
+.dt-intake { margin-left: 3px; font-size: 11px; color: var(--warning-ink); white-space: nowrap; }

@@ -1,0 +1,23 @@
+<div style="font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2937">
+<p>Hello,</p>
+{% if kind == "stage1" %}
+<p>please confirm the delivery dates of the containers below (booking request no. {{ request_id }}, {{ company }}).
+For each container you can confirm the date, propose another one or report a problem.</p>
+{% elif kind == "rejected" %}
+<p>we cannot approve the submitted delivery confirmation (request no. {{ request_id }}, {{ company }}).</p>
+<p style="background:#fef3c7;padding:10px 14px;border-radius:6px"><b>Comment:</b> {{ comment }}</p>
+<p>Please fill in the form again — the previous link is no longer active.</p>
+{% else %}
+<p>thank you — the delivery dates have been approved (request no. {{ request_id }}, {{ company }}).
+Please provide the driver details for the containers below.</p>
+{% endif %}
+<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;font-size:13px">
+<tr style="background:#1f4e79;color:#fff;font-weight:bold"><td>Container</td><td>Vessel</td><td>Date</td><td>Warehouse</td></tr>
+{% for c in containers %}<tr><td><b>{{ c.no }}</b></td><td>{{ c.vessel }}</td><td>{{ c.date }}{% if c.slot %} {{ c.slot }}{% endif %}</td><td>{{ c.warehouse }}</td></tr>
+{% endfor %}</table>
+{% if note %}<p><b>Notes:</b> {{ note }}</p>{% endif %}
+<p style="margin:22px 0"><a href="{{ link }}" style="background:#0b5fff;color:#fff;padding:12px 26px;border-radius:8px;text-decoration:none;font-weight:bold">{% if kind == "stage2" %}Provide driver details{% else %}Confirm deliveries{% endif %}</a></p>
+<p style="color:#64748b;font-size:12px">This link can be used once and is valid until {{ expires }}. Do not forward it.
+Questions? Just reply to this e-mail{% if operator_email %} ({{ operator_email }}){% endif %}.</p>
+<p>Best regards,<br>{{ operator }}</p>
+</div>

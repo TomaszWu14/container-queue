@@ -1,0 +1,619 @@
+# Macierz uprawnień TIMPORYE: rola × trasa × metoda → oczekiwany wynik.
+# Pilnuje: backend/tests/test_permissions_matrix.py (statycznie vs zależności + na żywo 403/401).
+# Nowa trasa → szkic wpisu: `python ../tests/gen_permissions.py` z katalogu backend/.
+#
+# Legenda:
+#   200 / '2xx'  — dostęp (dla '2xx' dokładny kod 200/201/204 ustali test w Etapie 2)
+#   403          — rola odrzucona przez zależność
+#   401          — anon (bez logowania)
+#   public       — trasa świadomie publiczna (token w linku / logowanie / health)
+#   komentarz „rola sprawdzana też w treści” — wynik ustalony testem na żywo (2026-09-26);
+#     „brama: 404/422” = rola przepuszczona, ale handler odrzucił atrapę danych → zakres
+#     na realnych rekordach sprawdzi test IDOR (Etap 2)
+#
+# Wymiary NIEUJĘTE w kolumnach (testowane osobno w Etapie 2):
+#   * spółka: zasób innej spółki → 404 (IDOR), niezależnie od roli; admin i flaga
+#     view_all_companies widzą wszystkie spółki (warehouse NIGDY — can_view_all)
+#   * partnerzy (forwarder, customs) NIE mają osi spółki: company_id/view_all na ich koncie są
+#     ignorowane (deps.own_company_id) — konta matrycy partnerów są bez spółki, jak na produkcji
+#   * magazyn: konto warehouse zawężone do swojego magazynu (DLT/ACME)
+#   * konto nieaktywne → 401; tryb podglądu admina („jako rola”) → mutacje 403
+#   * 2xx zakłada poprawne dane wejściowe; walidacja (422) testowana osobno
+roles: [admin, logistics, warehouse, forwarder, customs, purchasing, sales]
+routes:
+  "POST /api/containers/{container_id}/archive": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "DELETE /api/attachments/{attachment_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "POST /api/containers/{container_id}/attachments/{attachment_id}/link": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # scoping: get_container_checked,get_scoped (wspólny plik)
+  "DELETE /api/containers/{container_id}/attachments/{attachment_id}/link": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # scoping: get_container_checked,get_scoped (wspólny plik)
+  # --- poczekalnia dokumentów (spec 2026-10-06 §2) ---
+  "GET /api/containers/{container_id}/intake": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/intake/items/{item_id}/file": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: get_scoped (kontener wgrania; spedytor tylko własne)
+  "GET /api/intake/{batch_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: get_scoped (kontener wgrania; spedytor tylko własne)
+  "PATCH /api/intake/items/{item_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: get_scoped (kontener wgrania; spedytor tylko własne)
+  "POST /api/containers/{container_id}/intake": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "POST /api/intake/{batch_id}/confirm": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # scoping: get_scoped (kontener wgrania; spedytor tylko własne)
+  "POST /api/intake/{batch_id}/discard": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # scoping: get_scoped (kontener wgrania; spedytor tylko własne)
+  "POST /api/intake/inbox": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # poczta → poczekalnia (n8n, token automatu = konto logistyki)
+  "GET /api/intake/unmatched": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: company_filter_ids (spółka wgrania)
+  # --- admin ---
+  "GET /api/companies": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_company
+  "POST /api/companies": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/companies/{company_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/customs-agencies": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/customs-agencies": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customs-agencies/{agency_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/customs-agencies/{agency_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/users": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/sms-settings": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ustawienia SMS (2026-09-28)
+  "PUT /api/admin/sms-settings": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ustawienia SMS (2026-09-28)
+  "POST /api/users": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/users/{user_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin
+  "PATCH /api/users/{user_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin
+  "POST /api/users/{user_id}/reset-invite": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- analytics ---
+  "GET /api/analytics/operational": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "POST /api/analytics/upload": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- assistant ---
+  "POST /api/assistant/ask": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+
+  # --- audit_read ---
+  "GET /api/audit": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- auth ---
+  "POST /api/auth/2fa/enable": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}  # rola sprawdzana też w treści: admin; brama: 422 dla admin
+  "POST /api/auth/2fa/setup": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}  # rola sprawdzana też w treści: admin
+  "POST /api/auth/2fa/verify": {anon: public}
+  "POST /api/auth/change-password": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "POST /api/auth/forgot-password": {anon: public}
+  "POST /api/auth/login": {anon: public}
+  "POST /api/auth/logout": {anon: public}
+  "GET /api/auth/me": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/auth/me/prefs": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PUT /api/auth/me/prefs": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PATCH /api/auth/me/settings": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/auth/refresh": {anon: public}
+  "POST /api/auth/reset-password": {anon: public}
+  "GET /api/auth/sessions": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/auth/sessions/revoke-others": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "DELETE /api/auth/sessions/{session_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+
+  # --- avatars ---
+  "DELETE /api/me/avatar": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "POST /api/me/avatar": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "GET /api/users/{user_id}/avatar": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+
+  # --- avizo ---
+  "GET /api/avizo/driver/{token}": {anon: public}
+  "POST /api/avizo/driver/{token}": {anon: public}
+  "POST /api/avizo/send": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: check_container_access
+  "GET /api/avizo/{token}": {anon: public}
+  "POST /api/avizo/{token}": {anon: public}
+  "POST /api/avizo/{token}/propose": {anon: public}
+  "GET /api/avizo/{token}/slots": {anon: public}
+
+  # --- avizo_proposals ---
+  "GET /api/avizo-proposals": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-proposals/{proposal_id}/accept": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-proposals/{proposal_id}/reject": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- avizo_requests ---
+  "GET /api/avizo-requests": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_company
+  "GET /api/avizo-requests/{request_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-requests/{request_id}/approve": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-requests/{request_id}/cancel": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-requests/{request_id}/reject": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-requests/{request_id}/resend": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/avizo-requests/{request_id}/revoke": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- checklist ---
+  "GET /api/checklist-points": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/checklist-points": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/checklist-points/{point_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/containers/{container_id}/checklist": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "PUT /api/containers/{container_id}/checklist": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- complaints ---
+  "GET /api/complaint-photos/{photo_id}/download": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/complaints": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "POST /api/complaints": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # rola sprawdzana też w treści: forwarder; scoping: get_scoped; brama: 422 dla forwarder
+  "GET /api/complaints/stats": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/complaints/{complaint_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "PATCH /api/complaints/{complaint_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/complaints/{complaint_id}/photos": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/complaints/{complaint_id}/report": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/complaints/{complaint_id}/send": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/complaints/{complaint_id}/status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/problem-types": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/problem-types": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/problem-types/{type_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/settings": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PUT /api/settings": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- complaints_letters ---
+  "GET /api/complaints/{complaint_id}/letter": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+
+  # --- consolidation ---
+  "GET /api/consolidation/containers": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/consolidation/proposals": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "POST /api/containers/{cid}/close-consolidation": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "DELETE /api/containers/{cid}/orders/{po_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PUT /api/containers/{cid}/orders/{po_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/containers/{container_id}/orders": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "POST /api/purchase-orders/{po_id}/block": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/purchase-orders/{po_id}/crd": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/purchase-orders/{po_id}/release": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/purchase-orders/{po_id}/unblock": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- containers ---
+  "GET /api/containers": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/containers/counts": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: can_view_all,scope_containers
+  "GET /api/containers/export/xlsx": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/containers/to-forward": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "GET /api/containers/{container_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/containers/{container_id}/history": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PATCH /api/containers/{container_id}/needs-forwarding": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/containers/{container_id}/palletization": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+
+  # --- containers_bulk ---
+  "POST /api/containers/bulk/status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/bulk/warehouse": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- containers_changes ---
+  "GET /api/changes/digest": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/changes/feed": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: can_view_all,scope_containers
+  "POST /api/containers/{container_id}/special": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/watch": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "GET /api/watch": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/watch/reasons": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+
+  # --- containers_contents ---
+  "GET /api/containers/fill-summary": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/containers/{container_id}/items": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 403, purchasing: 200, sales: 200}
+  "GET /api/containers/{container_id}/packing": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/containers/{container_id}/sent-links": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/containers/{container_id}/sent-links": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/sent-links/{link_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- containers_orders ---
+  "GET /api/orders": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "POST /api/orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/orders/{order_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "POST /api/zlecenia": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- containers_planning ---
+  "GET /api/containers/plan/pending": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "POST /api/containers/plan/send": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: check_container_access
+  "GET /api/containers/transport-conflicts": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/containers/{container_id}/plan/confirm": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: 403, purchasing: 403, sales: 403}
+  "GET /api/containers/{container_id}/suggest-notify-date": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/queue": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/ui-config": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+
+  # --- containers_purge ---
+  "DELETE /api/containers": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/containers/{container_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- containers_stats ---
+  "GET /api/analysis/forecast": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: check_company_access
+  "GET /api/analysis/unloading": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: check_company_access
+  "GET /api/stats/dashboard": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/stats/monthly": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/stats/occupancy-forecast": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/stats/transit-trend": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+
+  # --- containers_write ---
+  "POST /api/containers": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/import-po": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "PATCH /api/containers/{container_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/warehouse": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- customer_orders ---
+  "GET /api/customer-orders/responsibles": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: company_filter_ids
+  "GET /api/customer-orders": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 200}  # scoping: scope_company
+  "POST /api/customer-orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customer-orders/{order_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "PATCH /api/customer-orders/{order_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- customs ---
+  "GET /api/customs/agencies": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/customs/board": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 200, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: customs; scoping: scope_containers
+  "GET /api/customs/case-statuses": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/customs/case-statuses": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customs/case-statuses/{status_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/customs/case-statuses/{status_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/customs/containers/{container_id}/agent": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: '2xx', purchasing: 403, sales: 403}
+  "POST /api/customs/containers/{container_id}/assign": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/customs/containers/{container_id}/case-status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: '2xx', purchasing: 403, sales: 403}  # rola sprawdzana też w treści: customs; brama: 422 dla customs
+  "POST /api/customs/containers/{container_id}/send-docs": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/customs/containers/{container_id}/status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: '2xx', purchasing: 403, sales: 403}  # rola sprawdzana też w treści: customs; brama: 422 dla customs
+  "POST /api/customs/containers/{container_id}/unassign": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/customs/document-types": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/customs/document-types": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customs/document-types/{type_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/customs/document-types/{type_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- data_subject ---
+  "GET /api/admin/data-subject": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # RODO art. 15 (GDPR-005)
+  "POST /api/admin/data-subject/anonymize-driver": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # RODO art. 17 (GDPR-005)
+
+  # --- dictionaries ---
+  "GET /api/forwarders": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # rola sprawdzana też w treści: forwarder
+  "POST /api/forwarders": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/forwarders/{forwarder_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/forwarders/{forwarder_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/forwarders/{forwarder_id}/merge": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/suppliers": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # rola sprawdzana też w treści: forwarder; scoping: scope_suppliers
+  "POST /api/suppliers": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/suppliers/{supplier_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/suppliers/{supplier_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/suppliers/{supplier_id}/merge": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/suppliers/{supplier_id}/stats": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/warehouses": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # rola sprawdzana też w treści: forwarder; scoping: scope_company
+  "POST /api/warehouses": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/warehouses/{warehouse_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "PATCH /api/warehouses/{warehouse_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- dictionaries_audit ---
+  "GET /api/audit/{entity_type}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_suppliers
+  "GET /api/audit/{entity_type}/{entity_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin; scoping: can_view_all,check_company_access,check_supplier_access; brama: 404 dla admin
+
+  # --- dictionaries_ref ---
+  "GET /api/carriers": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/carriers": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/carriers/{carrier_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/carriers/{carrier_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/carriers/{carrier_id}/merge": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/container-ports": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "DELETE /api/container-ports/{port_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/container-types": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/container-types": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/fx": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/material-units": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "DELETE /api/material-units/{unit_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/ports": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/ports": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/ports/{port_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/ports/{port_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/ports/{port_id}/merge": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/supplier-contacts": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 200, purchasing: 200, sales: 403}  # rola sprawdzana też w treści: forwarder; scoping: get_scoped,scope_suppliers
+  "POST /api/supplier-contacts": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- doc_templates ---
+  "GET /api/customs/containers/{container_id}/send-docs/preview": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/customs/doc-templates": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/customs/doc-templates": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customs/doc-templates/{template_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/customs/doc-templates/{template_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- documents ---
+  "GET /api/archive/attachments-zip": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "POST /api/attachment-suggestions/{suggestion_id}/accept": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/attachment-suggestions/{suggestion_id}/reject": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "GET /api/containers/{container_id}/attachment-suggestions": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/containers/{container_id}/attachments/zip": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/containers/{container_id}/cmr": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/customs/docs-gaps": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "GET /api/documents/search": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_company,scope_containers
+  "GET /api/invoice-jobs/{job_id}/order-compare": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "GET /api/invoice-jobs/{job_id}/packing-compare": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+
+  # --- driver ---
+  "GET /api/containers/{container_id}/driver-sms": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/driver-sms": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: 403, purchasing: 403, sales: 403}
+
+  # --- forwarding ---
+  "PATCH /api/containers/{container_id}/customs": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # bez spedytora (odprawa = agencja, 2026-09-28); scoping: require_roles
+  "PATCH /api/containers/{container_id}/driver": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin,forwarder,logistics; scoping: require_roles
+  "GET /api/containers/{container_id}/messages": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/containers/{container_id}/messages": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+  "POST /api/forwarding/queue-email": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/transport-orders": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_transport_orders
+  "POST /api/transport-orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/transport-orders/kpi": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_transport_orders
+  "POST /api/transport-orders/{order_id}/status": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}  # rola sprawdzana też w treści: forwarder; brama: 422 dla forwarder
+
+  # --- forwarding_files ---
+  "GET /api/agency-templates": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/agency-templates/{key}/sample": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/agency-templates/{key}/sample": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PUT /api/agency-templates/{key}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/attachments/{attachment_id}/download": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/containers/{container_id}/attachments": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/document-tiles": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: scope_containers
+  "GET /api/containers/{container_id}/document-tiles": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # scoping: get_container_checked
+  "POST /api/containers/{container_id}/attachments": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: 403}
+
+  # --- forwarding_freight ---
+  "GET /api/freight-invoices": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped,scope_company
+  "POST /api/freight-invoices": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "DELETE /api/freight-invoices/{invoice_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/freight-invoices/{invoice_id}/approve": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/freight-invoices/{invoice_id}/download": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/freight-invoices/{invoice_id}/reject": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/freight-invoices/{invoice_id}/submit": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- health ---
+  "GET /api/admin/health/deep": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/health/deep": {anon: public}
+
+  # --- imports ---
+  "POST /api/import/containers": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/order-items": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/purchase-orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/queue-sync": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/sharepoint-sync": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/import/queue-sync-date-from": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- imports_master ---
+  "POST /api/import/container-ports": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "POST /api/import/dlt-stock": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "POST /api/import/master-data": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/material-units": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "GET /api/import/sap-imports/{import_id}/errors.xlsx": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/sap-orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/import/sp-materials": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # jak MARM (ACL-003): dane materiałowe wspólne grupy
+  "POST /api/import/suppliers-lfa1": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/import/templates/{kind}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- inbox ---
+  "GET /api/inbox": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 200, purchasing: 200, sales: 403}  # rola sprawdzana też w treści: admin,forwarder,warehouse; scoping: scope_company,scope_containers,scope_transport_orders
+
+  # --- invoice_agency ---
+  "GET /api/invoice-batches/{batch_id}/agency-mail.eml": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/invoice-batches/{batch_id}/agency-mail/preview": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/invoice-batches/{batch_id}/symbols.xlsx": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/invoice-batches/{batch_id}/sadue.xml": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/invoice-batches/{batch_id}/sad-drafts": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/invoice-batches/{batch_id}/sad-drafts/{draft_id}/pages/{page}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/invoice-batches/{batch_id}/agency-ack": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "GET /api/theme-colors": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PUT /api/admin/theme-colors": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/sad-drafts/inbox": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/presence": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: '2xx'}
+  "POST /api/presence/leave": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: '2xx'}
+  "POST /api/invoice-batches/{batch_id}/sad-drafts": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/invoice-batches/{batch_id}/sad-drafts/{draft_id}/decision": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/invoice-batches/{batch_id}/sad-drafts/{draft_id}/compare": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/invoice-batches/{batch_id}/sad-drafts/{draft_id}/xml": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+
+  # --- invoice_checks ---
+  "GET /api/invoice-jobs/{job_id}/checks": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "GET /api/invoice-jobs/{job_id}/pdf": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "GET /api/invoice-jobs/{job_id}/conformity": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "POST /api/invoice-jobs/{job_id}/link-orders": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: get_scoped
+  "POST /api/invoice-jobs/{job_id}/move": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: get_scoped
+  "POST /api/invoice-jobs/{job_id}/copy": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: get_scoped
+  "GET /api/invoice-conformity/report": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+
+  # --- invoices ---
+  "GET /api/containers/{container_id}/invoice-batches": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/containers/{container_id}/invoice-batches": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "DELETE /api/invoice-batches/{batch_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/invoice-batches/{batch_id}/export": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "GET /api/invoice-jobs/{job_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/invoice-jobs/{job_id}/ignore": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "POST /api/invoice-jobs/{job_id}/reprocess": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "PUT /api/invoice-jobs/{job_id}/review": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+
+  # --- knowledge ---
+  "GET /api/knowledge/bulletins": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # rola sprawdzana też w treści: admin,logistics
+  "POST /api/knowledge/bulletins": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/knowledge/bulletins/unread": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/knowledge/bulletins/{bulletin_id}/ack": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "GET /api/knowledge/bulletins/{bulletin_id}/acks": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/knowledge/notes": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 200}  # ACL-001: bez partnerów zewnętrznych
+  "POST /api/knowledge/notes": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/knowledge/notes/{note_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: autor albo admin (ACL-001)
+  "PATCH /api/knowledge/notes/{note_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: autor albo admin (ACL-001)
+  "GET /api/knowledge/topics": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 200}  # ACL-001: bez partnerów zewnętrznych
+  "POST /api/knowledge/topics": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # ACL-001: bez partnerów zewnętrznych
+  "PATCH /api/knowledge/topics/{topic_id}/status": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/knowledge/topics/{topic_id}/vote": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # ACL-001: bez partnerów zewnętrznych
+
+  # --- dlt ---
+  "GET /api/dlt/{token}": {anon: public}
+  "POST /api/dlt/{token}/prepared": {anon: public}
+  "POST /api/dlt/{token}/shipped": {anon: public}
+
+  # --- logs ---
+  "GET /api/admin/logs/client-errors": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/logs/jobs": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/logs/requests": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/logs/traffic": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- main ---
+  "GET /api/health": {anon: public}
+  "GET /dzis": {anon: public}
+
+  # --- master_quality ---
+  "GET /api/master-data/quality": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- materials ---
+  "GET /api/materials": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/materials/count": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/materials/import": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/materials/ml/stats": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/materials/ml/train": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PATCH /api/materials/{material_id}": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PUT /api/materials/{material_id}/override": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- notifications ---
+  "GET /api/notifications": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/notifications/read": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "GET /api/notifications/rules": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "PUT /api/notifications/rules": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/notifications/unread-count": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/notifications/feed": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/notifications/{notification_id}/thread": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/notifications/unread": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+
+  # --- pallets ---
+  "GET /api/pallet-calls": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "POST /api/pallet-calls": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/pallet-calls/analysis": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/pallet-calls/hu-inventory": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "POST /api/pallet-calls/powerbi/connect": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/pallet-calls/powerbi/status": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/pallet-calls/{call_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "PATCH /api/pallet-calls/{call_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/pallet-calls/{call_id}/cancel": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/pallet-calls/{call_id}/confirm": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/pallet-calls/{call_id}/deliver": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/pallet-calls/{call_id}/prepared": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # DLT w aplikacji (2026-10-07) — zamiast linku z maila
+  "POST /api/pallet-calls/{call_id}/send": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/pallet-calls/{call_id}/shipped": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # DLT w aplikacji (2026-10-07) — zamiast linku z maila
+  "GET /api/pallet-calls/{call_id}/xlsx": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "GET /api/stock-targets": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/stock-targets": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "DELETE /api/stock-targets/{target_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+
+  # --- paz ---
+  "GET /api/paz": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}
+  "POST /api/paz": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "POST /api/paz/import": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+  "DELETE /api/paz/{paz_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # ACL-003: dane wspólne grupy — logistyka tylko grupowa (view_all) albo spółki-właściciela materiałów (np. ACME); konto matrycy (jedna spółka) 403
+
+  # --- portal ---
+  "PUT /api/containers/{container_id}/customer": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/customers": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_company
+  "POST /api/customers": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/customers/{customer_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "PATCH /api/customers/{customer_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/public/branding": {anon: public}
+
+  # --- purchase_orders ---
+  "GET /api/purchase-orders": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "DELETE /api/purchase-orders/{po_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_company_scoped
+
+  # --- purchasing ---
+  "PUT /api/purchasing/containers/{container_id}/status": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+
+  # --- queue_calendar ---
+  "GET /api/calendar": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PUT /api/calendar": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/calendar/year": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/limits": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "PUT /api/limits": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- quotes ---
+  "GET /api/transport-jobs": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin,forwarder,logistics
+  "POST /api/transport-jobs": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/transport-jobs/{job_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 403, sales: 403}
+  "PATCH /api/transport-jobs/{job_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/transport-jobs/{job_id}/agent": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: 403, sales: 403}  # rola sprawdzana też w treści: forwarder; brama: 422 dla forwarder
+  "POST /api/transport-jobs/{job_id}/send": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- quotes_offers ---
+  "POST /api/transport-jobs/{job_id}/cancel": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/transport-jobs/{job_id}/choose": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/transport-jobs/{job_id}/price-change": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: 403, sales: 403}  # rola sprawdzana też w treści: forwarder; brama: 422 dla forwarder
+  "POST /api/transport-jobs/{job_id}/quote": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: 403, sales: 403}  # rola sprawdzana też w treści: forwarder; brama: 422 dla forwarder
+  "POST /api/transport-jobs/{job_id}/quotes/{quote_id}/approve-price": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/transport-jobs/{job_id}/quotes/{quote_id}/history": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: forwarder; brama: 404 dla forwarder
+  "POST /api/transport-jobs/{job_id}/reopen": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- quotes_stats ---
+  "GET /api/stats/cost-report": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/stats/forwarders": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/stats/transport-jobs.csv": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- receipts ---
+  "GET /api/containers/{cid}/order-lines": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 403, purchasing: 200, sales: 200}  # scoping: get_scoped
+  "GET /api/containers/{cid}/receipts": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 403, purchasing: 200, sales: 200}  # scoping: get_scoped
+  "PUT /api/containers/{cid}/receipts": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "DELETE /api/containers/{cid}/receipts/{receipt_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: get_scoped
+
+  # --- sad_import ---
+  "POST /api/sad-import/check": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: check_container_access (per plik)
+  "POST /api/sad-import/report": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: check_container_access (per plik)
+
+  # --- search ---
+  "GET /api/search/suggest": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+
+  # --- share ---
+
+  # --- supplier_aliases ---
+  "DELETE /api/suppliers/aliases/{alias_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/suppliers/resolve": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/suppliers/resolve/apply": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/suppliers/resolve/orphans": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/suppliers/resolve/orphans/delete": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/suppliers/unmapped": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "GET /api/suppliers/{supplier_id}/aliases": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "POST /api/suppliers/{supplier_id}/aliases": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: check_company_access,get_scoped
+
+  # --- supplier_maps ---
+  "GET /api/supplier-material-maps": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company
+  "POST /api/supplier-material-maps": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}
+  "DELETE /api/supplier-material-maps/{map_id}": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: 403, customs: 403, purchasing: '2xx', sales: 403}  # scoping: get_scoped
+  "PATCH /api/supplier-material-maps/{map_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+
+  # --- supplier_profiles ---
+  "GET /api/suppliers/{supplier_id}/doc-profile": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "PUT /api/suppliers/{supplier_id}/doc-profile": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "PUT /api/suppliers/{supplier_id}/required-docs": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- supplier_samples ---
+  "POST /api/suppliers/{supplier_id}/doc-profile/samples": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "DELETE /api/suppliers/{supplier_id}/doc-profile/samples/{sample_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+  "GET /api/suppliers/{supplier_id}/doc-profile/samples/{sample_id}/preview": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: get_scoped
+  "POST /api/suppliers/{supplier_id}/doc-profile/test": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: get_scoped
+
+  # --- system ---
+  "GET /api/admin/auth-log": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/blocked-ips": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/admin/blocked-ips": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/admin/blocked-ips/{blocked_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/admin/impersonate": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # rola sprawdzana też w treści: admin
+  "GET /api/admin/integrations": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/monitor": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/admin/system": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/admin/system/verify-backup": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/client-error": {anon: public}
+  "POST /api/users/{user_id}/2fa/disable": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/users/{user_id}/sessions": {anon: 401, admin: 200, logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "DELETE /api/users/{user_id}/sessions/{session_id}": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+
+  # --- tracking ---
+  "GET /api/containers/{container_id}/events": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/containers/{container_id}/timeline": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/tracking/congestion": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "GET /api/tracking/map": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/tracking/vessels": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+  "GET /api/tracking/vessels/{vessel_id}/cargo": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # rola sprawdzana też w treści: customs,warehouse; brama: 404 dla warehouse, 404 dla customs
+  "GET /api/tracking/vessels/{vessel_id}/photo": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/tracking/vessels/{vessel_id}/photo": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/tracking/vessels/{vessel_id}/photo/fetch": {anon: 401, admin: '2xx', logistics: 403, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/tracking/weather": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}  # scoping: scope_containers
+
+  # --- warehouse_ops ---
+  "POST /api/containers/{container_id}/ramp-stage": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/containers/{container_id}/unload-photos": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "POST /api/containers/{container_id}/unload-photos": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/unload/start": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/containers/{container_id}/unload/stop": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/gate": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # scoping: scope_containers
+  "GET /api/avizo-forwarder": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: scope_avizo_requests / get_scoped
+  "GET /api/avizo-forwarder/{request_id}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: get_scoped
+  "GET /api/avizo-forwarder/{request_id}/slots": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 200, customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: scope_avizo_requests / get_scoped
+  "POST /api/avizo-forwarder/{request_id}/confirm": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: scope_avizo_requests / get_scoped
+  "POST /api/avizo-forwarder/{request_id}/drivers": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: scope_avizo_requests / get_scoped
+  "POST /api/avizo-forwarder/{request_id}/propose": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: 403, forwarder: '2xx', customs: 403, purchasing: 403, sales: 403}  # awizacja w aplikacji (2026-10-07), scoping: scope_avizo_requests / get_scoped
+  "POST /api/gate/{container_id}/checkin": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "POST /api/gate/{container_id}/delay": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}  # spóźnienie kierowcy wpisane w aplikacji (2026-10-07)
+  "POST /api/unload-photos/{photo_id}/complaint": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/unload-photos/{photo_id}/download": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 403}
+  "GET /api/warehouse/staffing": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 403, customs: 403, purchasing: 200, sales: 403}  # scoping: scope_company,scope_containers
+
+  # --- watchers ---
+  "GET /api/containers/{container_id}/watchers": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+  "POST /api/tracking/vessels/{vessel_id}/watch": {anon: 401, admin: '2xx', logistics: '2xx', warehouse: '2xx', forwarder: '2xx', customs: '2xx', purchasing: '2xx', sales: '2xx'}
+  "GET /api/tracking/vessels/{vessel_id}/watchers": {anon: 401, admin: 200, logistics: 200, warehouse: 200, forwarder: 200, customs: 200, purchasing: 200, sales: 200}
+
+  # --- sp_materials ---
+  "GET /api/sp-materials/import-status": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/sp-materials/sheets": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}
+  "GET /api/sp-materials/sheets/{name}": {anon: 401, admin: 200, logistics: 200, warehouse: 403, forwarder: 403, customs: 403, purchasing: 403, sales: 403}

@@ -1,0 +1,14 @@
+/* Pasek obecności w nagłówku (PresenceBar.tsx): nakładające się awatary jak w SharePoint.
+   Nagłówek ma tło --chrome w obu motywach, więc obwódka i kropka odcinają się od niego. */
+:root { --pb-online: #4fd1a5; }   /* jasna zieleń — nagłówek jest ciemny (--chrome) w obu motywach */
+.pb-bar { display: flex; align-items: center; list-style: none; margin: 0 var(--sp-2) 0 0; padding: 0; }
+.pb-user { position: relative; display: inline-flex; margin-left: -6px; border-radius: 50%;
+           box-shadow: 0 0 0 2px var(--chrome); cursor: default; }
+.pb-user:first-child { margin-left: 0; }
+.pb-user .user-avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.pb-dot { position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; border-radius: 50%;
+          background: var(--text-muted); box-shadow: 0 0 0 2px var(--chrome); }
+.pb-user.on .pb-dot { background: var(--pb-online); }
+.pb-more { width: 28px; height: 28px; align-items: center; justify-content: center;
+           font-size: var(--fs-xs); font-weight: 600; color: var(--chrome-text); background: var(--chrome); border: 1px solid var(--chrome-text); }
+@media (max-width: 900px) { .pb-bar { display: none; } }   /* wąski ekran: pasek i tak ciasny */

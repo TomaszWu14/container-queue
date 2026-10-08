@@ -1,0 +1,17 @@
+Hello,
+
+{% if kind == "stage1" %}please confirm the delivery dates of the containers below (booking request no. {{ request_id }}, {{ company }}).
+{% elif kind == "rejected" %}we cannot approve the submitted delivery confirmation (request no. {{ request_id }}, {{ company }}).
+Comment: {{ comment }}
+Please fill in the form again — the previous link is no longer active.
+{% else %}the delivery dates have been approved (request no. {{ request_id }}, {{ company }}). Please provide the driver details.
+{% endif %}
+{% for c in containers %}- {{ c.no }} | {{ c.vessel }} | {{ c.date }}{% if c.slot %} {{ c.slot }}{% endif %} | {{ c.warehouse }}
+{% endfor %}{% if note %}
+Notes: {{ note }}
+{% endif %}
+Form: {{ link }}
+This link can be used once and is valid until {{ expires }}.
+
+Best regards,
+{{ operator }}{% if operator_email %} <{{ operator_email }}>{% endif %}

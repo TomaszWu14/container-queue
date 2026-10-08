@@ -1,0 +1,22 @@
+/* Poczekalnia dokumentów (IntakeWaitingRoom.tsx) — tokeny jak reszta aplikacji */
+.inq-panel { display: grid; gap: 8px; }
+.inq-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px;
+  background: var(--warning-bg); color: var(--warning-ink); font-weight: 600;
+}
+.inq-bar .btn { margin-left: auto; }
+.inq-drop {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px;
+  border: 1.5px dashed var(--border-strong); border-radius: 10px;
+}
+.inq-drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.inq-scroll { overflow-x: auto; }
+.inq-table td { vertical-align: top; }
+.inq-table select { max-width: 220px; }
+.inq-name { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.inq-msg { font-size: 12px; color: var(--muted); max-width: 260px; margin-top: 2px; }
+.inq-rejected td { opacity: .55; }
+.inq-rejected .inq-name { text-decoration: line-through; }
+.badge.inq-g-ok { background: var(--success-bg); color: var(--success-ink); }
+.badge.inq-g-uncertain, .badge.inq-g-duplicate { background: var(--warning-bg); color: var(--warning-ink); }
+.badge.inq-g-conflict, .badge.inq-g-unreadable { background: var(--danger-bg); color: var(--danger-ink); }

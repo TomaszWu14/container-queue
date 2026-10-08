@@ -1,0 +1,14 @@
+/* Podgląd maila do agencji (AgencyMailPreviewModal) */
+.mail-prev-head { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 12px; font-size: 14px; }
+.mail-prev-head dt { color: var(--muted); }
+.mail-prev-head dd { margin: 0; overflow-wrap: anywhere; }
+.mail-prev-warn { padding: 8px 12px; margin-bottom: 12px; border-radius: var(--r-sm); font-size: 13px;
+                  background: var(--warning-bg); color: var(--warning-ink); border-left: 3px solid var(--warning-ink); }
+.mail-prev-warn ul { margin: 4px 0 0 18px; padding: 0; }
+.mail-prev-ok { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--success-ink); }
+.mail-prev-h { margin: 8px 0 4px; font-size: 13px; }
+.mail-prev-body { margin-top: 10px; font-size: 13px; }
+.mail-prev-body pre { white-space: pre-wrap; font-family: var(--font-sans); background: var(--soft);
+                      padding: 8px 10px; border-radius: var(--r-sm); margin: 6px 0 0; }
+.inv-unmatched-note { margin: 8px 0 0; padding: 6px 10px; font-size: 13px; border-radius: var(--r-sm);
+                      background: var(--warning-bg); color: var(--warning-ink); }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- syntetyczny eksport SADUE (dane fikcyjne) -->
+<SADUE P15aKodKrajuWys="CN" P17aKodKrajuPrzeznacz="PL" P22WalutaSADu="USD">
+<P1Kontekst IDSADu="7100005" Dekl1="IM" Dekl2="A"/>
+<ZestawySADu P22WartoscZestawu="19450.7">
+<Kontenery Numer="DEMU5000050"/>
+<DokumWymag KodDokum="N935" NrDokum="DEMOS2607E01"/>
+<PozycjeSADu P34KrajPochodz="CN" P38MasaNetto="1500.20" P42WartoscPozycji="9800.40"><P33KodTowaru KodCN="3005905000"/></PozycjeSADu>
+<PozycjeSADu P34KrajPochodz="CN" P38MasaNetto="1440.10" P42WartoscPozycji="9650.30"><P33KodTowaru KodCN="3005909900"/></PozycjeSADu>
+</ZestawySADu>
+</SADUE>

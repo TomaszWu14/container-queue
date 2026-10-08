@@ -1,0 +1,218 @@
+/* kolejka: pasek narzędzi, dni, wiersze, zaznaczenie, filtry w nagłówkach — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* nawigacja zakresu dat: segmenty + stepper miesiąc/tydzień */
+/* jeden pasek: wyszukiwarka + tryby dat + akcje w jednej linii */
+/* #7 — toolbar w jednym wierszu (filtr „Miesiąc" nie rozpycha exportów na drugi wiersz);
+   przy ciasnocie przewija się poziomo zamiast zawijać */
+/* desktop: bez overflow (ucinał dropdowny Widok/Eksport — overflow-x:auto wymusza clip w pionie);
+   pasek może się zawinąć, a poziomy scroll zostaje tylko na wąskich ekranach (media 720px niżej) */
+.queue-onebar { align-items: center; gap: 8px; row-gap: 8px; flex-wrap: wrap; }
+.queue-onebar .qsearch { flex: 0 1 300px; min-width: 180px; }
+
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: var(--panel); }
+.seg button {
+  border: none; background: var(--panel); color: var(--muted); padding: 7px 14px;
+  font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 0;
+  border-left: 1px solid var(--border); transition: background 0.12s, color 0.12s;
+}
+.seg button:first-child { border-left: none; }
+.seg button:hover { background: var(--soft); color: var(--text); }
+.seg button.active { background: var(--accent); color: var(--text-on-fill); }
+.range-stepper { display: inline-flex; align-items: center; gap: 6px; }
+.range-stepper .step {
+  border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  width: 30px; height: 30px; border-radius: 3px; font-size: 20px; line-height: 1;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.range-stepper .step:hover { background: var(--soft); border-color: var(--accent); color: var(--accent-ink); }
+.range-label {
+  min-width: 190px; text-align: center; font-weight: 600; font-size: 14px;
+  padding: 6px 12px; background: var(--soft); border-radius: 3px; text-transform: capitalize;
+}
+.week-pick { min-width: 96px; }
+
+.btn {
+  background: var(--accent); border: 1px solid var(--accent); color: var(--text-on-fill);
+  border-radius: 3px; padding: 8px 15px;
+  font-weight: 700; font-size: 14px; letter-spacing: 0.1px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 1px 2px rgba(16, 38, 63, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+/* rozjaśnienie nakładką zamiast filter — filter na elemencie z tekstem rozmywał glify */
+.btn:hover { background-image: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); box-shadow: 0 3px 8px -1px rgba(16, 38, 63, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(16, 38, 63, 0.3); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn.secondary {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  box-shadow: 0 1px 1px rgba(16, 38, 63, 0.06);
+}
+.btn.secondary:hover { background: var(--soft); }
+.btn.small { padding: 5px 10px; font-size: 13px; border-radius: 3px; }
+/* tokeny --danger-* mają wariant ciemny (B29: różowo-biały przycisk świecił na granacie) */
+.btn.danger { background: var(--danger-bg); border-color: color-mix(in srgb, var(--danger-ink) 35%, transparent); color: var(--danger-ink); }
+.btn.danger:hover { background: color-mix(in srgb, var(--danger-ink) 14%, var(--danger-bg)); border-color: var(--danger-ink); }
+/* stan nieaktywny kolorem (nie opacity — półprzezroczysty tekst traci kontrast i ostrość) */
+.btn:disabled, .btn.secondary:disabled, .btn.danger:disabled { background: var(--soft); border-color: var(--border); color: var(--muted);
+  cursor: not-allowed; box-shadow: none; background-image: none; transform: none; }
+.btn svg { display: block; }
+
+.queue-toolbar {
+  position: sticky; top: var(--topbar-h, 0px); z-index: 40;
+  background: var(--bg); padding: 6px 0 4px; margin-bottom: 4px;
+}
+.queue-toolbar .filters { margin-bottom: 8px; }
+
+/* alert rozjazdu ETA (AIS vs kontener) w tabeli statków */
+.drift-alert { color: var(--danger); font-weight: 700; }
+
+.lock-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--panel); color: var(--accent-ink); border: 1px solid var(--accent);
+  border-radius: 3px; padding: 7px 14px; font-weight: 600; font-size: 14px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.lock-btn:hover { background: var(--accent-soft); }
+.lock-btn.unlocked {
+  background: var(--warning-bg); color: var(--warning-ink); border-color: color-mix(in srgb, var(--warning-ink) 35%, transparent);
+  box-shadow: 0 0 0 3px rgba(240, 196, 100, 0.3);
+}
+.lock-btn.unlocked:hover { background: color-mix(in srgb, var(--warning-ink) 10%, var(--warning-bg)); }
+.move-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--warning-bg); border: 1px solid color-mix(in srgb, var(--warning-ink) 35%, transparent); color: var(--warning-ink);
+  border-radius: 3px; padding: 9px 14px; margin-bottom: 8px;
+  font-size: 14px; font-weight: 600;
+}
+
+.tile-cols, .tile {
+  display: grid; grid-template-columns: var(--tile-cols); gap: var(--tile-gap, 12px);
+  align-items: center;
+}
+/* pionowe rozgraniczenia kolumn — kreska w połowie odstępu, ::after zamiast border,
+   żeby nie ruszać layoutu siatki (komórki są wyśrodkowane, nie rozciągnięte) */
+.tile > *, .tile-cols > * { position: relative; }
+.tile > *::after, .tile-cols > *::after {
+  content: ""; position: absolute; width: 1px; pointer-events: none;
+  right: calc(var(--tile-gap, 12px) / -2);
+  top: -7px; bottom: -7px; background: var(--border);
+}
+/* kreska sięga krawędzi kafelka — musi nadążać za wysokością wiersza
+   (Kompakt / Standard / Wysoki), stąd ten sam token co padding */
+.tile > *::after {
+  top: calc(var(--tile-pad-y, 11px) * -1); bottom: calc(var(--tile-pad-y, 11px) * -1);
+}
+.tile > *:last-child::after, .tile-cols > *:last-child::after { content: none; }
+
+.tile {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  padding: var(--tile-pad-y, 11px) 16px;
+  font-size: var(--tile-font, 1.01rem);   /* +15% względem 0.88rem */
+  transition: transform 0.15s, border-color 0.15s;
+}
+/* #A3 — zebra: co drugi wiersz przyciemniony NAKŁADKĄ (background-image), nie
+   background-color. Dzięki temu tinty magazynu/opóźnienia (.tile.wh-*, .tile.delayed)
+   dalej działają — nakładka kładzie się na nie, zamiast je nadpisywać — i jedna reguła
+   obsługuje oba motywy (token --zebra). */
+.tile:nth-of-type(even) {
+  background-image: linear-gradient(0deg, var(--zebra), var(--zebra));
+}
+/* wiersz opóźniony (projekt „Kolejka - palety kolorystyczne"): brzoskwiniowy tint
+   + czerwony pasek przy lewej krawędzi. Tint magazynu (wh-*) definiowany NIŻEJ
+   wygrywa z tintem opóźnienia — pasek (box-shadow) zostaje w obu przypadkach. */
+/* opóźnienie = tylko czerwony pasek z lewej (bez brzoskwiniowego tła — mniej kolorów naraz) */
+.tile.delayed { box-shadow: inset 4px 0 0 var(--danger); }
+/* kolejka Acme: tło całego wiersza wg magazynu rozładunku (tokeny, kontrast AA) */
+.tile.wh-dlt { --row-bg: var(--row-dlt); background: var(--row-bg); border-color: var(--wh-dlt-border); box-shadow: inset 6px 0 0 var(--row-dlt-border); }
+.tile.wh-acme { --row-bg: var(--row-acme); background: var(--row-bg); border-color: var(--wh-acme-border); box-shadow: inset 6px 0 0 var(--row-acme-border); }
+/* bez magazynu: jasnoszary wiersz z łagodną pulsującą poświatą — sygnał „przypisz magazyn” */
+.tile.wh-none {
+  --row-bg: var(--row-none); background: var(--row-bg);
+  --row-bar: var(--row-none-border);   /* kolor paska czytany przez animację (opóźniony → czerwony) */
+  border-color: var(--row-none-border);
+  animation: wh-none-pulse 2.4s ease-in-out infinite;
+}
+@keyframes wh-none-pulse {
+  0%, 100% { box-shadow: inset 4px 0 0 var(--row-bar), 0 0 0 0 transparent; }
+  50%      { box-shadow: inset 4px 0 0 var(--row-bar), 0 0 0 2px var(--row-none-glow), 0 0 10px 1px var(--row-none-glow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tile.wh-none { animation: none; box-shadow: inset 4px 0 0 var(--row-bar), 0 0 0 2px var(--row-none-glow); }
+}
+/* animacja nadpisuje box-shadow (wygrywa z regułami) — opóźnienie podajemy przez zmienną paska */
+.tile.delayed.wh-none { --row-bar: var(--danger); }
+.tile.delayed.wh-dlt, .tile.delayed.wh-acme { box-shadow: inset 4px 0 0 var(--danger); }
+
+.order-link { color: var(--accent-ink); font-weight: 600; cursor: pointer; }
+.order-link:hover { text-decoration: underline; }
+.tile:hover {
+  transform: translateY(-1px); border-color: #cdd9e9;
+  /* #A3 — nakładka zamiast background-color, z tego samego powodu co zebra;
+     podwójna warstwa --zebra daje hover wyraźnie ciemniejszy niż pasek zebry */
+  background-image: linear-gradient(0deg, var(--zebra), var(--zebra)),
+                    linear-gradient(0deg, var(--zebra), var(--zebra));
+}
+.tile.movable { cursor: grab; }
+.tile.movable:active { cursor: grabbing; }
+.tile.dragging { opacity: 0.4; }
+/* Zaznaczenie = OBWÓDKA (border + inset ring), bez nadpisywania tła — dzięki temu
+   wiersz DLT/ACME zachowuje swoje tło również po zaznaczeniu (hierarchia stanów). */
+.tile.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+
+/* decyzja 7 — jeden przycisk „📅 od–do", pola dat w popoverze pod nim */
+.hdr-range-btn { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hdr-range-pop {
+  position: absolute; top: 100%; left: 0; z-index: 20; margin-top: 4px;
+  display: flex; flex-direction: column; gap: 4px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3);
+}
+.hdr-range-pop input.hdr-filter { width: auto; text-transform: none; }
+/* decyzja 14 — mini-etykieta nad wypełnionym filtrem tekstowym/listowym, żeby
+   placeholder-as-label nie gubił kontekstu po wpisaniu wartości */
+.hdr-filter-wrap { display: block; min-width: 0; }
+.hdr-filter-lbl {
+  display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; color: var(--muted); padding: 0 4px 1px;
+}
+/* pomoc kontekstowa (HelpTip) — ikona "?" + popover, ten sam wzorzec zamykania co hdr-range-pop */
+.help-tip { position: relative; display: inline-block; }
+.help-tip-btn {
+  width: 16px; height: 16px; line-height: 14px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--panel); color: var(--muted);
+  font-size: 11px; font-weight: 700; cursor: pointer; text-align: center;
+}
+.help-tip-btn:hover { color: var(--accent-ink); border-color: var(--accent); }
+.help-pop {
+  position: absolute; top: 100%; left: 0; z-index: 30; margin-top: 4px; width: 240px;
+  padding: 8px 10px; font-size: 12px; font-weight: 400; line-height: 1.35;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3); color: var(--text);
+}
+/* wyszukiwarka z podpowiedziami (2026-09-24): pole w jednej linii, tekst przewija się w środku */
+.qsearch-wrap { position: relative; flex: 0 1 300px; min-width: 180px; }
+.qsearch-wrap .qsearch { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qsearch-wrap .qsearch:focus { text-overflow: clip; }   /* przy edycji kursor przewija tekst w polu */
+.qsearch-note { position: absolute; z-index: 41; top: calc(100% + 4px); right: 0; padding: 3px 8px; border-radius: 4px;
+  font-size: 12px; white-space: nowrap; background: var(--text); color: var(--panel); }
+.qsuggest { position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; min-width: 100%; width: max-content;
+  max-width: min(520px, 90vw); margin: 0; padding: 4px 0; list-style: none; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px rgba(16, 38, 63, 0.18); }
+.qsuggest li { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 6px 10px; cursor: pointer; font-size: 14px; }
+.qsuggest li.sel { background: var(--soft); }
+.qsuggest .qsuggest-type { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+.qsuggest .qsuggest-type { display: inline-flex; align-items: center; gap: 4px; }
+.qsuggest .qsuggest-type svg { flex-shrink: 0; color: var(--accent); }
+.qsuggest .qsuggest-label b { font-weight: 700; color: var(--text, inherit); background: var(--soft); border-radius: 2px; }
+.qsuggest .qsuggest-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qsuggest .qsuggest-meta { font-size: 12px; white-space: nowrap; }
+.qsuggest.below-note { top: calc(100% + 30px); }
+.qsuggest li.qsuggest-empty { display: block; cursor: default; color: var(--muted); }
+.tile.flash { outline: 2px solid var(--accent); outline-offset: -2px; transition: outline-color 0.4s; }
+
+@media (max-width: 900px) { .queue-onebar .qsearch-wrap { flex: 1 1 100%; min-width: 0; } }

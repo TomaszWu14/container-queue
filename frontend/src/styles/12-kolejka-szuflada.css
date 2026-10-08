@@ -1,0 +1,86 @@
+/* Kolejka Enterprise — szuflada kontenera (makieta: grid 1fr + 360–420px ≥1280px, nakładka poniżej) */
+.kq-layout { position: relative; }
+.kq-layout.with-drawer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 420px); }
+.kq-layout > .kq-scroll { min-width: 0; }
+.kq-drawer {
+  position: sticky; top: 8px; align-self: start; max-height: calc(100vh - 16px);
+  display: flex; flex-direction: column; overflow: hidden; background: var(--panel);
+  border: 1px solid var(--border); border-left: 1px solid var(--border);
+  box-shadow: -10px 0 22px rgba(16, 38, 63, 0.06);
+}
+@media (max-width: 1279px) {
+  .kq-layout.with-drawer { display: block; }
+  .kq-drawer {
+    position: absolute; right: 0; top: 0; bottom: 0; max-height: none; width: min(420px, 92%);
+    z-index: 20; box-shadow: -18px 0 50px rgba(16, 38, 63, 0.22);
+  }
+}
+
+.kq-dr-top { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 0; }
+.kq-dr-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kq-dr-ico {
+  width: 30px; height: 30px; border-radius: 8px; border: none; background: none; cursor: pointer;
+  color: var(--muted); font-size: 15px;
+}
+.kq-dr-ico:hover:not(:disabled) { background: rgba(16, 38, 63, 0.06); color: var(--text); }
+.kq-dr-ico:disabled { opacity: 0.35; cursor: default; }
+.kq-dr-no { font-size: 19px; font-weight: 700; color: var(--kq-navy); letter-spacing: -0.01em; }
+.kq-dr-sub { font-size: 13px; color: var(--muted); }
+.kq-dr-stages { display: flex; gap: 3px; margin: 4px 0 2px; }
+.kq-dr-stages i { flex: 1; height: 6px; border-radius: 999px; background: var(--border); }
+.kq-dr-stages i.done { background: var(--success-ink); }
+.kq-dr-stages i.cur { background: var(--accent); }
+.kq-dr-stage { font-size: 11px; color: var(--muted); }
+.kq-dr-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 6px -16px 0; padding: 0 12px; }
+.kq-dr-tabs button {
+  background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: 8px 10px; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer;
+}
+.kq-dr-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+.kq-dr-body { flex: 1; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.kq-dr-kv { display: grid; gap: 7px 12px; margin: 6px 0 0; font-size: 13px; }
+.kq-dr-pair { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px; }
+.kq-dr-pair dt { color: var(--muted); }
+.kq-dr-pair dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.kq-dr-hist { list-style: none; margin: 0; padding: 0; }
+.kq-dr-hist li {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; padding: 8px 0;
+  border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.kq-dr-hist li > i { width: 10px; height: 10px; border-radius: 999px; margin-top: 4px; background: var(--border-strong); }
+.kq-dr-hist li > i.new { background: var(--accent); }
+.kq-dr-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ikony Kolumny / Gęstość na końcu paska filtrów + popover kolumn */
+.kq-ico {
+  width: 30px; height: 30px; border-radius: 8px; border: none; background: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--muted);
+}
+.kq-ico:hover, .kq-ico.on { background: rgba(16, 38, 63, 0.06); color: var(--text); }
+.kq-cols { position: relative; }
+.kq-cols-pop {
+  position: absolute; z-index: 30; top: calc(100% + 4px); right: 0; width: 240px; max-height: 70vh;
+  overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-2);
+}
+.kq-cols-pop label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.kq-cols-pop label.locked { color: var(--muted); }
+.kq-cols-pop .kq-ct { margin-top: 4px; }
+/* gęstość: wiersz 30px */
+.kq-table.dense td { height: 30px; }
+.kq-table.dense .badge { height: 18px; line-height: 16px; }
+
+/* pasek akcji masowych — zastępuje pasek filtrów przy zaznaczeniu (makieta) */
+.kq-bulk {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 18px;
+  padding: 5px 6px 5px 12px; border-radius: 10px; font-size: 13px;
+  background: var(--navy-800, var(--chrome)); color: var(--text-on-fill);
+}
+.kq-bulk-sep { width: 1px; height: 18px; background: rgba(255, 255, 255, 0.22); }
+.kq-bulk .btn.small, .kq-bulk-sel { font-size: 12px; padding: 3px 9px; min-height: 0; }
+.kq-bulk-sel { border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+.kq-bulk-clear { background: none; border: none; color: var(--chrome-text); font-size: 12px; cursor: pointer; }
+.kq-bulk-clear:hover { color: var(--text-on-fill); }
+
+.kq-dr-foot { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }

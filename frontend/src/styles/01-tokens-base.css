@@ -1,0 +1,142 @@
+/* tokeny :root, motywy spółek, dark mode, baza strony — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+:root {
+  /* Paleta „Kolejka — hybryda A+E" (Claude Design): kraftowe płótno, atramentowy
+     chrome (#0a1f33), akcent teal (#0f7b86). Zastępuje stalowo-navy z 2026-09-10. */
+  /* 2026-09-23: chłodne neutralne płótno zamiast kraftowego beżu (feedback: „grzybowe") */
+  /* design system (2026-09-27): --bg/--panel/--border/--text i paleta ciemna pochodzą z 00-tokens.css;
+     poniżej zostają tylko aliasy starych nazw i tokeny jeszcze niepokryte przez design system */
+  /* #A2 — #64748b dawał na --bg tylko 4.3:1 (poniżej WCAG AA). #5a6a7f = 5.0:1 na --bg
+     i 5.6:1 na --panel; jeden token naprawia wszystkie teksty wtórne w aplikacji. */
+  --muted: var(--text-muted);  /* wtórne teksty / etykiety (grafit, 5.4:1 na --bg) */
+  --muted-strong: #3b4859; /* nagłówki kolumn / drobny uppercase — AA także przy <11px */
+  /* #A2 — --faint było używane tylko przez fallback (gwiazdka/kopiuj/sort); jasny
+     #94a3b8 nie spełniał AA. Teraz realny token, nie martwa nazwa. */
+  --faint: var(--muted);
+  /* --accent / --accent-ink / --chrome: 00-tokens.css */
+  --good: var(--success-ink);
+  --danger: var(--danger-ink);
+  /* aliasy zmiennych używanych w CSS/TSX, których nigdy nie zdefiniowano (działały tylko fallbacki) */
+  --mono: var(--font-mono); --fg: var(--text); --ok: var(--success-ink); --radius: var(--r-md);
+  --panel-2: var(--surface-2); --navy-800: var(--chrome);
+  /* tło wiersza kolejki wg magazynu rozładunku (DLT = róż, ACME = zieleń); tekst --text
+     na tych tłach zachowuje kontrast WCAG AA (ciemny tekst na jasnym pastelu).
+     Nasycenie pogłębione 2x względem bieli — poprzednie odcienie (#fceef8/#f4fcf6)
+     dzieliło od bieli tylko 3-17 punktów na 255 i na wielu monitorach były nieczytelne. */
+  /* magazyny (2026-09-24): lekki tint tła + pasek akcentu + ramka 1px w tym samym odcieniu */
+  --wh-dlt: #F4A1B8;          /* Pantone 14-2216 TCX Pink Drink – akcent */
+  /* tła magazynów (wh-dlt-bg, wh-acme-bg) w 00-tokens.css — bez zmian; ramka/pasek z tokenu -bar (≥ 3:1 do tła) */
+  --wh-dlt-border: var(--wh-dlt-bar);
+  --wh-acme: #98FB98;        /* miętowy – akcent */
+  --wh-acme-border: var(--wh-acme-bar);
+  --row-dlt: var(--wh-dlt-bg); --row-dlt-border: var(--wh-dlt-bar);
+  --row-acme: var(--wh-acme-bg); --row-acme-border: var(--wh-acme-bar);
+  --row-none: var(--wh-none-bg);  --row-none-border: var(--wh-none-bar); --row-none-glow: rgba(96, 106, 120, 0.28);
+  /* znacznik głównego transportu w kolejce (morski / lotniczy / kolej / koła / inne) — tło półprzezroczyste, bo leży na tle magazynu */
+  --tr-sea: #1d5b8f; --tr-sea-bg: rgba(38, 118, 186, 0.12);
+  --tr-air: #5b4a9a; --tr-air-bg: rgba(110, 90, 190, 0.12);
+  --tr-inter: #17685f; --tr-inter-bg: rgba(30, 140, 125, 0.12);
+  --tr-truck: #a8480f; --tr-truck-bg: rgba(240, 130, 60, 0.14);
+  --tr-road: #3b4859; --tr-road-bg: rgba(59, 72, 89, 0.10);
+  --tr-rail: #3b4a8c; --tr-rail-bg: rgba(59, 74, 140, 0.10); /* kolej: indygo (żółte tło gryzło się z różem/miętą wierszy) */
+  --tr-other: #5b6676; --tr-other-bg: rgba(91, 102, 118, 0.08);
+  /* chrome kolejki (baner dnia, pastylki, hovery) — tokeny, żeby motywy zakładek
+     (mięta/piasek/stal z projektu „Kolejka - palety kolorystyczne" 3a) kaskadowały */
+  --banner-bg: #f6f8fb;   --banner-border: #d2d9e2;  --banner-ink: var(--muted);
+  --soft: var(--surface-2); /* neutralny chip / hover / tor paska postępu */
+  --zebra: rgba(20, 34, 51, 0.03);  /* pasek zebry / hover wiersza kolejki */
+  --band: #ffffff;        --band-border: #d2d9e2;    /* kontener paska firm */
+  /* cienie --shadow-1/2/3 i --font-sans/--font-mono: 00-tokens.css */
+  font-family: var(--font-sans);
+}
+
+/* Jeden akcent w całej aplikacji (decyzja 2026-09-28): zakładki spółek NIE przemalowują
+   --accent (dawniej .mod-acme/-dlt/-cobalt) — spółkę pokazuje kropka --co-* na zakładce. */
+/* #62 — dark mode: nadpisanie tokenów :root na ciemną konsolę. --chrome zostaje
+   ciemny (bez zmian — topnav już jest ciemny w obu motywach). --accent bez zmian
+   (bursztyn jako wypełnienie działa tak samo na ciemnym). --accent-ink JAŚNIEJSZY,
+   bo ciemny bursztynowy tekst (#8a5c00) byłby nieczytelny na ciemnym tle.
+   --st-* (statusowe pary) nie istnieją w tym repo — pominięte. */
+:root[data-theme='dark'] {
+  --muted-strong: #b6c2d4;
+  /* ciemny motyw: pastelowe tło zjadłoby jasny tekst — ten sam odcień jako przezroczysty tint */
+  --row-none-glow: rgba(160, 170, 185, 0.25);
+  --tr-sea: #7fb8e8; --tr-sea-bg: rgba(127, 184, 232, 0.13);
+  --tr-air: #b3a4ec; --tr-air-bg: rgba(179, 164, 236, 0.13);
+  --tr-inter: #7fd3c6; --tr-inter-bg: rgba(127, 211, 198, 0.12);
+  --tr-truck: #f5a372; --tr-truck-bg: rgba(245, 163, 114, 0.13);
+  --tr-road: #b8c4d2; --tr-road-bg: rgba(184, 196, 210, 0.12);
+  --tr-rail: #aebcf2; --tr-rail-bg: rgba(174, 188, 242, 0.13);
+  --tr-other: #9aa8b9; --tr-other-bg: rgba(154, 168, 185, 0.10);
+  --banner-bg: #1c2836; --banner-border: #2c3b4d; --banner-ink: var(--muted);
+  --zebra: rgba(255, 255, 255, 0.045);
+  --band: #182230;       --band-border: #263344;
+}
+/* akcenty modułów w dark: jasne warianty inków — ciemne (#0a5a63 itp.) znikały na ciemnym tle
+   (linki dostawców, nr kontenerów, nazwy aktywnej firmy) */
+:root[data-theme='dark'] table.grid th { background: var(--panel); }
+:root[data-theme='dark'] .tile-cols { border-bottom-color: var(--border); }
+:root[data-theme='dark'] table.grid tr:hover td { background: var(--soft); }
+:root[data-theme='dark'] .cal-year-step,
+:root[data-theme='dark'] .cols-menu,
+:root[data-theme='dark'] .export-menu,
+:root[data-theme='dark'] .cal-month-wd { background: var(--panel); color: var(--text); }
+/* .seg i pola formularzy biorą kolory z tokenów w regułach bazowych — dawne nadpisanie dark
+   (wyższa specyficzność) przykrywało .seg button.active: brak wyróżnienia wyboru (audyt A10) */
+
+/* .page maluje własne tło z tokena, żeby retint pokrył cały obszar treści */
+.page { background: var(--bg); }
+
+/* nagłówki stron — design system: IBM Plex Sans 600 (Archivo usunięty) */
+h1 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.01em; font-size: var(--fs-xl); }
+/* UX-008 (audyt S13): nagłówki ze skali --fs-*, nie z domyślnych przeglądarki (h3 = 18,72 px);
+   reguły klasowe (.panel h3, .modal h2 …) dalej wygrywają specyficznością */
+h2 { font-size: var(--fs-lg); }
+h3 { font-size: var(--fs-md); }
+/* numer kontenera jako tytuł (karta, portal, link udostępnienia) — główny identyfikator ekranu */
+h2.mono { font-size: var(--fs-xl); }
+/* cyfry tabelaryczne: kolumny liczb, dat i liczników nie „tańczą” */
+table, .mono, time { font-variant-numeric: tabular-nums; }
+
+* { box-sizing: border-box; }
+/* rezerwacja miejsca na pasek przewijania — pasek narzędzi nie „drga" przy scrollu */
+html { scrollbar-gutter: stable; overflow-y: scroll; }
+/* subtelne, spójne paski przewijania (webkit + firefox) */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border); border-radius: 8px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); background-clip: content-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  /* ostrość: wygładzanie w skali szarości zamiast subpikselowego „rozmycia" przy 125/150% */
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility; }
+button { cursor: pointer; font: inherit; }
+input, select, textarea { font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--panel); color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+input[type="checkbox"] { accent-color: var(--accent); }
+/* #A2 — placeholder domyślnie renderuje się ~#757575 na białym (ok), ale w polach na
+   szarym płótnie spadał poniżej AA; token trzyma go na tym samym poziomie co etykiety */
+::placeholder { color: var(--muted); opacity: 1; }
+
+/* zegar trzech stref w jednej linii: „RAD 08:29 · SHA 14:29 · POR 07:29" (mono 11px) */
+.worldclock {
+  display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1; color: #c7d2e0;
+  font-variant-numeric: tabular-nums;
+}
+.worldclock .wc-label { color: #8fa6c4; font-weight: 700; letter-spacing: 0.04em; }
+.worldclock .wc-time { font-weight: 600; }
+.worldclock .wc-sep { color: #68758a; margin-right: 6px; }
+
+.page { padding: 8px 20px 16px; max-width: none; margin: 0 auto; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+.filters input[type="text"] {
+  min-width: 260px; flex: 1; padding-left: 34px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235a6a7f' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+  background-repeat: no-repeat; background-position: 11px 50%;
+}
+.spacer { flex: 1; }
+

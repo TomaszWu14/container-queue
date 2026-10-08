@@ -1,0 +1,59 @@
+# Konfiguracja narzędzi jakości/bezpieczeństwa backendu (ruff, bandit).
+# Uruchamiane lokalnie przez pre-commit oraz w workflow Security (bandit).
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+# E/W styl, F błędy, I sortowanie importów, B pułapki (m.in. B904 — łańcuch wyjątku),
+# UP modernizacja, BLE szerokie `except` bez logu z exc_info ani ponownego raise (CODE-007),
+# C90 złożoność cyklomatyczna funkcji (CODE-004, próg w [tool.ruff.lint.mccabe]),
+# PIE zbędne konstrukcje (smell „Lazy Element”, skill python-code-smells). Świadomie NIE:
+# ERA (100% fałszywych alarmów na polskich komentarzach z nawiasem/dwukropkiem),
+# C4/RET/SIM (sam styl — masowa zmiana = konflikty PR), ARG (Depends(user) jako bramka roli)
+select = ["E", "F", "W", "I", "B", "UP", "BLE", "C90", "PIE"]
+ignore = [
+    "E501",  # długość linii pilnowana miękko, nie łamiemy istniejącego kodu
+    "B008",  # Depends()/Form() w defaultach parametrów to idiom FastAPI, nie pułapka
+    # Styl domu — masowa zmiana setek linii dałaby tylko konflikty w równoległych PR-ach:
+    "E702",   # `a; b` w jednej linii (zwarte db.add(x); db.flush())
+    "I001",   # kolejność importów (brak isorta w repo)
+    "UP031",  # formatowanie `%` — kosmetyka
+    "E741",   # `l` jako długość/warstwa w pakowaniu 3D — czytelne w kontekście
+    "UP042",  # (str, Enum) → StrEnum zmienia str()/format() wartości — nie na ślepo
+]
+
+[tool.ruff.lint.mccabe]
+# CODE-004: nowa funkcja ponad próg = czerwony CI — dziel na pomocniki / tablicę reguł
+max-complexity = 20
+
+[tool.ruff.lint.per-file-ignores]
+# CODE-004: _process_row (22) czeka na rozstrzygnięcie DB-011 (#846/#860 zmieniają tę funkcję)
+"app/importers/queue.py" = ["C901"]
+# assert w testach jest w porządku; importy po sys.path/monkeypatch (E402), fixtury pytest
+# importowane i przesłaniane parametrem (F811), zip() na danych testowych (B905)
+"tests/*" = ["S101", "E402", "F811", "B905"]
+
+[tool.mypy]
+# CODE-003: typy kodu aplikacji w CI. Znane błędy: mypy-baseline.txt (może tylko maleć),
+# nowe = czerwony CI. Uruchamianie: python scripts/mypy_baseline.py [--update]
+python_version = "3.12"
+files = ["app"]
+ignore_missing_imports = true   # biblioteki bez typów (py3dbp, pytesseract, msal…)
+warn_unused_ignores = true      # `# type: ignore` bez potrzeby = do usunięcia
+
+[tool.bandit]
+# skan tylko kodu aplikacji; testy i migracje pomijamy
+exclude_dirs = ["tests", "migrations", ".venv"]
+skips = ["B101"]  # assert_used — dozwolone (głównie w testach)
+
+[tool.coverage.run]
+# TEST-005: pokrycie kodu aplikacji w CI (ci-backend.yml: PYTEST_ADDOPTS=--cov)
+source = ["app"]
+
+[tool.coverage.report]
+# próg tuż pod stanem z 2026-09-28 (92,6% linii, 18018 instrukcji) — spadek = czerwony PR; podnoś po dopisaniu testów
+fail_under = 92
+precision = 1

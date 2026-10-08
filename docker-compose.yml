@@ -1,0 +1,48 @@
+# Stack DEV (lokalny). Prod: docker-compose.coolify.yml.
+# Sekrety bez wartości domyślnych — skopiuj .env.example do .env i uzupełnij.
+# Porty tylko na 127.0.0.1 (nie wystawiaj dev-stacku w sieć).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timporye
+      POSTGRES_USER: timporye
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ustaw POSTGRES_PASSWORD w .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timporye"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-dev}
+      DATABASE_URL: postgresql+psycopg2://timporye:${POSTGRES_PASSWORD:?ustaw POSTGRES_PASSWORD w .env}@db:5432/timporye
+      SECRET_KEY: ${SECRET_KEY:?ustaw SECRET_KEY w .env}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ustaw ADMIN_PASSWORD w .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      TRACKING_INTERVAL_HOURS: ${TRACKING_INTERVAL_HOURS:-12}
+      UPLOADS_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  pgdata:
+  uploads:

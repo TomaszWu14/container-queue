@@ -1,0 +1,248 @@
+/* Odchudzenie kolejki (2026-09-25): nad tabelą tylko 2 wiersze, gęsta tabela z przewijaniem
+   w środku (sticky nagłówek kolumn 26px + sticky nagłówki grup 28px), puste kolumny 32px. */
+
+/* ---- wiersz 1: firmy (pigułki) + szukaj + akcje ---- */
+.kq-toolbar { padding: 6px 0 0; margin-bottom: 0; }
+.kq-top { display: flex; align-items: center; gap: 8px; min-height: 32px; margin-bottom: 6px; }
+.kq-pills { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.kq-pill {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; height: 28px; padding: 0 6px 0 11px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--panel); color: var(--text);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.kq-pill:hover { border-color: #b9c7dc; }
+.kq-pill-n {
+  min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--soft); color: var(--muted);
+  font-size: 11px; line-height: 18px; text-align: center;
+}
+.kq-pill.active { background: var(--accent); border-color: var(--accent); color: var(--text-on-fill); }
+.kq-pill.active .kq-pill-n { background: rgba(0, 0, 0, 0.25); color: var(--text-on-fill); }
+/* znacznik spółki: kolor --co-* ustawia CompanyTabs (w dark jaśniejszy wariant);
+   akcent zostaje jeden dla całej aplikacji */
+.kq-pill-dot { flex: none; width: 8px; height: 8px; margin-left: -2px; border-radius: 50%; background: var(--kq-co); }
+.kq-pill.active .kq-pill-dot { box-shadow: 0 0 0 1px var(--text-on-fill); }
+/* 0 kontenerów: wyszarzone i mniejsze, ale klikalne */
+.kq-pill.zero:not(.active) { height: 24px; font-size: 12px; color: var(--muted); }
+.kq-pill.transit:not(.active) { padding-right: 11px; }
+.kq-pill.transit .kq-pill-n { margin-right: -5px; }
+.kq-vsep { flex: none; width: 1px; height: 20px; background: var(--border); }
+
+.kq-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+/* wyszukiwarka 200px → 360px po focusie; spacer przed nią sprawia, że rośnie w lewo */
+.kq-actions .qsearch-wrap { flex: 0 0 200px; min-width: 0; transition: flex-basis 0.15s ease; }
+.kq-actions .qsearch-wrap:focus-within { flex-basis: 360px; }
+.kq-actions .qsearch-wrap .qsearch {
+  width: 100%; height: 30px; padding: 4px 10px; font-size: 13px; white-space: nowrap; text-overflow: ellipsis;
+}
+.kq-actions .kq-ico { border: 1px solid var(--border); background: var(--panel); }
+.kq-actions .kq-ico:disabled { opacity: 0.5; cursor: default; }
+/* przełącznik edycji — kłódka; włączony = pomarańczowy */
+.kq-actions .lock-btn { width: 30px; height: 30px; padding: 0; border-radius: 8px; color: var(--muted); box-shadow: none; }
+.kq-actions .lock-btn.unlocked { background: #f97316; border-color: #ea580c; color: #fff; box-shadow: none; }
+.kq-actions .lock-btn.unlocked:hover { background: #ea580c; }
+.kq-add { height: 30px; white-space: nowrap; }
+.kq-more-menu { font-size: 16px; line-height: 1; }
+.kq-more-pop { width: 260px; gap: 4px; }
+.kq-more-pop > button {
+  display: flex; align-items: center; gap: 6px; background: none; border: none; text-align: left;
+  padding: 7px 8px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; color: var(--text);
+}
+.kq-more-pop > button:hover { background: var(--soft); }
+.kq-more-pop .kq-danger { color: var(--danger); }
+.kq-more-sec { flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.kq-more-sec > button:not(.btn) {
+  background: none; border: none; text-align: left; padding: 4px 0; font: inherit; font-size: 13px; cursor: pointer;
+}
+.kq-cols-pop label input[type='radio'] { accent-color: var(--accent); }
+
+/* ---- wiersz 2 (36px): widoki | zakres, filtry, grupuj ---- */
+.kq-toolbar .kq-filters {
+  min-height: 36px; padding: 0 10px 0 4px; gap: 6px; flex-wrap: wrap; margin: 0;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px 8px 0 0;
+}
+.kq-toolbar .kq-tabs { display: flex; align-items: stretch; align-self: stretch; margin: 0; flex-wrap: nowrap; }
+.kq-toolbar .kq-tabs button, .kq-toolbar .kq-saved > button:first-child, .kq-toolbar .kq-save-view {
+  padding: 0 9px; height: 34px; font-size: 13px; white-space: nowrap;
+}
+.kq-toolbar .kq-saved { margin-bottom: 0; }
+.kq-filters .range-stepper { gap: 3px; }
+.kq-filters .range-stepper .step { width: 24px; height: 24px; font-size: 16px; }
+/* UX-011: na dotyku zakres dat i akcje zbiorcze też ≥ 44 px (gęstość 24–27 px zostaje dla myszy) */
+@media (pointer: coarse) {
+  .kq-filters .step, .kq-filters .week-pick, .kq-filters .btn, .kq-bulk .btn.small { min-height: var(--tap); }
+  .kq-filters .range-stepper .step { width: var(--tap); height: var(--tap); }
+}
+.kq-filters .week-pick { min-width: 0; height: 26px; padding: 0 6px; }
+.kq-filters .range-stepper input[type='date'] { height: 26px; padding: 0 6px; font-size: 12px; }
+.kq-filters .range-label { min-width: 0; padding: 3px 8px; }
+.kq-filters .kq-filter-pop { left: auto; right: 0; }
+.kq-toolbar .kq-bulk { margin: 0; min-height: 36px; border-radius: 8px 8px 0 0; }
+
+/* ---- tabela: przewijanie w środku, żeby nagłówki kolumn i grup były sticky ---- */
+.kq-scroll {
+  overflow: auto;
+  max-height: calc(100vh - var(--topbar-h, 0px) - var(--kq-bar-h, 90px) - 54px);
+}
+.kq-table th { height: 26px; font-size: 10px; z-index: 3; }
+.kq-table td { font-size: 13px; }
+.kq-table.dense td { height: 28px; font-size: 12px; }
+.kq-table.dense .badge { height: 17px; line-height: 17px; }
+/* nagłówek grupy: jedna linia ≤28px, przykleja się pod nagłówkiem kolumn; nieprzezroczysty — nagłówek
+   następnej grupy (późniejszy w DOM) nasuwa się na niego i go zastępuje */
+.kq-ghead > td { position: sticky; top: 26px; z-index: 2; height: 28px; padding: 0 10px; overflow: visible; }
+/* pasek grupy stoi przy lewej krawędzi przy przewijaniu w poziomie (sticky left:0 z 11-…css). Warunki:
+   td bez overflow:hidden (inaczej td staje się kontenerem przewijania dla sticky) i div węższy od td
+   z colSpan (inaczej wypełnia komórkę i nie ma gdzie się przesunąć) */
+.kq-ghead-in { width: max-content; gap: 7px; font-size: 13px; white-space: nowrap; }
+.kq-gsub { font-size: 12px; }
+.kq-gchip { font-size: 11px; padding: 0 7px; line-height: 17px; }
+.kq-gplan { background: none; border: none; padding: 0; font: inherit; font-size: 12px; font-weight: 700; color: var(--muted-strong); cursor: pointer; }
+.kq-gplan.plan-potwierdzone { color: var(--good); }
+/* 2–3 podgrupy planowania: cienkie separatory 22px z tekstem 11px */
+.kq-table tr.kq-plan > td { height: 22px; padding: 0 10px 0 56px; font-size: 11px; line-height: 1; }
+.kq-plan-btn { font-size: 11px; }
+.kq-plan .help-tip-btn { width: 14px; height: 14px; line-height: 12px; font-size: 10px; }
+
+/* kolumna 48px: checkbox + ☆/★; ● opóźnienia przy numerze */
+.kq-sel { white-space: nowrap; }
+.kq-sel input { margin: 0 3px 0 0; vertical-align: middle; }
+.kq-flag-btn { font-size: 12px; vertical-align: middle; }
+.kq-late-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); }
+.kq-st { font-size: 12px; }
+
+/* pasek 3px przy lewej krawędzi = kolor etapu — te same tokeny --st-*-ink co badge statusu (S6) */
+.kq-row > td:first-child { box-shadow: inset 3px 0 0 var(--stg, transparent); }
+.kq-row.stg-ZAPOWIEDZIANY { --stg: var(--st-ZAPOWIEDZIANY-ink); }
+.kq-row.stg-W_PRODUKCJI { --stg: var(--st-W_PRODUKCJI-ink); }
+.kq-row.stg-TRANSPORT_WSTEPNY { --stg: var(--st-TRANSPORT_WSTEPNY-ink); }
+.kq-row.stg-W_TRANSPORCIE { --stg: var(--st-W_TRANSPORCIE-ink); }
+.kq-row.stg-W_PORCIE { --stg: var(--st-W_PORCIE-ink); }
+.kq-row.stg-ODPRAWA { --stg: var(--st-ODPRAWA-ink); }
+.kq-row.stg-AWIZOWANY { --stg: var(--st-AWIZOWANY-ink); }
+.kq-row.stg-W_DOSTAWIE { --stg: var(--st-W_DOSTAWIE-ink); }
+.kq-row.stg-DOSTARCZONY { --stg: var(--st-DOSTARCZONY-ink); }
+.kq-row.stg-ZREALIZOWANY { --stg: var(--st-ZREALIZOWANY-ink); }
+
+/* przyklejony Nr kontenera (i kolumna wyboru) przy przewijaniu tabeli w bok */
+/* :where — niska specyficzność, żeby tła hover/zaznaczenia/aktywnego wiersza wygrywały */
+:where(.kq-table) td.kq-sel, :where(.kq-table) td.kq-c-no { position: sticky; background: var(--panel); z-index: 1; }
+/* warstwy: wiersz 0 < przyklejone komórki 1 < pasek dnia 2 < nagłówki kolumn 3 < róg (wybór + Nr) 4 */
+:root { --kq-sel-w: 48px; --kq-freeze-shadow: rgba(20, 34, 51, 0.16); }   /* = SEL_W w EnterpriseTable.tsx */
+:root[data-theme='dark'] { --kq-freeze-shadow: rgba(0, 0, 0, 0.55); }
+.kq-table .kq-sel { left: 0; }
+.kq-table .kq-c-no, .kq-table th.kq-h-no { left: var(--kq-sel-w); }
+.kq-table th.kq-sel, .kq-table th.kq-h-no { position: sticky; z-index: 4; }
+/* prawa krawędź zamrożonego bloku: sticky td gubi border-right przy border-collapse → linia jako cień
+   wewnętrzny; po przewinięciu w bok (oś czasu przewijania .kq-scroll) dochodzi miękki cień na zewnątrz */
+@media (min-width: 640px) {
+  .kq-table :is(td.kq-c-no, th.kq-h-no) { box-shadow: inset -1px 0 0 var(--kq-grid); }
+  @supports (animation-timeline: scroll()) {
+    .kq-table :is(td.kq-c-no, th.kq-h-no) {
+      animation: kq-freeze-edge linear both; animation-timeline: scroll(nearest inline); animation-range: 0 16px;
+    }
+  }
+}
+@keyframes kq-freeze-edge {
+  to { box-shadow: inset -1px 0 0 var(--kq-grid), 6px 0 6px -3px var(--kq-freeze-shadow); }
+}
+
+.kq-analysis-title { margin: 8px 0 12px; font-size: 18px; }
+.kq-analysis-title small { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+/* < 1440px: wiersz 2 ciaśniej, żeby nie zawijał się na laptopie 1366 */
+/* przewijanie przyciągane do pełnego wiersza tuż pod nagłówkami (kolumn 26px + dnia 28px) —
+   wiersz nie chowa się w połowie pod paskiem sum dnia. Tylko desktop (≤639px tabela = karty). */
+@media (min-width: 640px) {
+  .kq-scroll { scroll-snap-type: y proximity; scroll-padding-top: 54px; }
+  .kq-table tr.kq-row, .kq-table tr.kq-ghead { scroll-snap-align: start; }
+}
+
+@media (max-width: 1439px) {
+  .kq-toolbar .kq-grp-label { display: none; }
+  .kq-toolbar .kq-tabs button, .kq-toolbar .kq-saved > button:first-child, .kq-toolbar .kq-save-view { padding: 0 6px; }
+  .kq-toolbar .kq-filters .seg button { padding: 4px 7px; }
+  /* wiersz nie zawija się — zakładki widoków przewijają się w bok */
+  .kq-toolbar .kq-filters { flex-wrap: nowrap; }
+  .kq-toolbar .kq-filters > * { flex-shrink: 0; }
+  .kq-toolbar .kq-filters > .kq-tabs { flex: 1 1 auto; min-width: 120px; overflow-x: auto; scrollbar-width: none; }
+  .kq-toolbar .kq-filters > .spacer { display: none; }
+}
+
+/* < 1024px (tablet/telefon, audyt A12 B8 C18): zakładki widoków w osobnym wierszu przewijanym
+   w bok, narzędzia (zakres, filtry, grupuj) zawijają się pod nimi — bez rozpychania strony */
+@media (max-width: 1023px) {
+  .kq-toolbar .kq-filters { flex-wrap: wrap; row-gap: 6px; padding-bottom: 6px; }
+  .kq-toolbar .kq-filters > .kq-tabs {
+    flex: 1 0 100%; min-width: 0; overflow-x: auto; scroll-snap-type: x proximity;
+    border-bottom: 1px solid var(--border);
+  }
+  .kq-toolbar .kq-tabs > * { scroll-snap-align: start; }
+  .kq-toolbar .kq-filters > .kq-sep { display: none; }
+  .kq-toolbar .kq-filters .range-stepper { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-start; }
+}
+
+/* ---- < 1280px: firmy przewijane poziomo; Widok/Eksport/Edycja/Wyczyść w „⋯" ---- */
+.kq-narrow { display: none; }
+@media (max-width: 1279px) {
+  .kq-wide { display: none; }
+  .kq-ico.kq-narrow { display: inline-flex; }
+  .kq-more-pop > .kq-narrow { display: flex; }
+  .kq-pills { flex: 1 1 auto; overflow-x: auto; scrollbar-width: thin; }
+  .kq-top > .spacer { display: none; }
+  .kq-actions .qsearch-wrap { flex-basis: 160px; }
+}
+:root[data-theme='dark'] .kq-pill-n { background: var(--banner-bg); }
+/* < 640px: firmy w swoim wierszu, wyszukiwarka na resztę szerokości (bez rozszerzania na fokus) */
+@media (max-width: 639px) {
+  .kq-top { flex-wrap: wrap; row-gap: 6px; }
+  .kq-top > .kq-pills { flex: 1 0 100%; }
+  .kq-actions { flex: 1 1 100%; min-width: 0; }
+  .kq-actions .qsearch-wrap, .kq-actions .qsearch-wrap:focus-within { flex: 1 1 auto; }
+}
+
+/* < 640px: wiersz kolejki = karta (audyt A13). Nr + ⋯ u góry, dostawca pod spodem, niżej
+   dostawa / status / magazyn / demurrage z podpisem z data-label; pozostałe kolumny ukryte. */
+@media (max-width: 639px) {
+  .kq-table { display: block; min-width: 0 !important; }
+  .kq-table colgroup, .kq-table thead { display: none; }
+  .kq-table tbody { display: block; }
+  .kq-table tr.kq-ghead, .kq-table tr.kq-plan, .kq-table tr.kq-detail { display: block; }
+  .kq-table tr.kq-ghead > td, .kq-table tr.kq-plan > td, .kq-table tr.kq-detail > td { display: block; }
+  .kq-ghead-in { width: auto; flex-wrap: wrap; row-gap: 4px; white-space: normal; }
+  .kq-table tr.kq-row {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: var(--sp-2); row-gap: 2px;
+    padding: var(--sp-2) var(--sp-2) var(--sp-2) 4px; border-bottom: 1px solid var(--border);
+  }
+  .kq-table tr.kq-row { background: var(--kq-wh-bg, var(--panel)); }
+  .kq-table tr.kq-row > td {
+    display: none; position: static; height: auto; padding: 0; border: 0; white-space: normal; background: transparent;
+  }
+  .kq-table tr.kq-ghead > td { height: auto; padding: 6px 12px; }
+  .kq-table tr.kq-row > td.kq-sel { display: flex; grid-row: 1 / span 6; align-items: flex-start; gap: 2px; }
+  .kq-table tr.kq-row > td.kq-c-no { display: block; grid-column: 2; font-weight: 600; }
+  .kq-table tr.kq-row > td.kq-more { display: block; grid-column: 3; grid-row: 1; }
+  .kq-table tr.kq-row > td.kq-c-supplier { display: block; grid-column: 2 / 4; color: var(--text-muted); }
+  .kq-table tr.kq-row > :is(td.kq-c-notify, td.kq-c-status, td.kq-c-wh, td.kq-c-dem) {
+    display: flex; align-items: center; gap: var(--sp-2); grid-column: 2 / 4; font-size: var(--fs-sm);
+  }
+  .kq-table tr.kq-row > :is(td.kq-c-notify, td.kq-c-status, td.kq-c-wh, td.kq-c-dem)::before {
+    content: attr(data-label); min-width: 84px; color: var(--text-muted); font-size: var(--fs-xs);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+}
+
+/* 2026-09-29: pigułki transportu w wierszu — jasne szkło zamiast koloru tła, żeby nie gryzły się
+   z różem (DLT) / miętą (ACME) wiersza; kolor trybu niesie ikona, tekst i cienki obrys */
+.kq-table .tr-badge { background: var(--panel); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 28%, transparent);
+  padding: 1px 8px 1px 5px; font-size: 11px; }
+/* kopiowanie numerów (kontener / zamówienie / dostawa): kompaktowe, widać na najechaniu wiersza */
+.kq-table .copy-btn { min-width: 20px; min-height: 20px; padding: 0 3px; font-size: 12px; opacity: 0; }
+.kq-row:hover .copy-btn, .kq-table .copy-btn:focus-visible { opacity: 1; }
+@media (hover: none) { .kq-table .copy-btn { opacity: 1; } }
+/* separator dni: sticky td gubi obramowanie przy border-collapse → linia jako cień wewnętrzny */
+.kq-ghead > td { box-shadow: inset 0 2px 0 var(--border-strong), inset 0 -1px 0 var(--border); }
+/* pasek daty: stałe szerokości slotów → tytuł, dzień i liczniki w kolejnych dniach stoją w jednej kolumnie */
+.kq-gtitle { min-width: 104px; }
+.kq-gsub { min-width: 92px; }
+.kq-gchip { min-width: 70px; text-align: center; font-variant-numeric: tabular-nums; }
+@media (max-width: 639px) { .kq-gtitle, .kq-gsub, .kq-gchip { min-width: 0; } }

@@ -1,0 +1,136 @@
+/* moduły magazynu, szyna dnia/tygodnia, nagłówek aplikacji, poprawki końcowe — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* ===== W10 — moduły magazynu ===== */
+/* #62 etykieta QR: ukryta na ekranie; w trybie print-qr-label drukuje się TYLKO ona */
+.qr-label { display: none; }
+body.print-qr-label .qr-label {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; padding: 24px;
+}
+.qr-label-no { font-size: 29px; font-weight: 700; letter-spacing: 1px; }
+@media print {
+  body.print-qr-label .app-main > * > *:not(.qr-label),
+  body.print-qr-label .unload-card > *:not(.qr-label) { display: none !important; }
+  body.print-qr-label .qr-label { display: flex !important; }
+}
+
+/* #60 kolejka bramy — duża czcionka dla ochrony przy bramie */
+.gate-page { max-width: 900px; }
+.gate-big { font-size: 22px; }
+.gate-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  flex-wrap: wrap; margin-bottom: 10px;
+}
+.gate-row.gate-done { color: var(--muted); }
+.gate-main { display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+.gate-no { font-size: 26px; }
+.gate-truck { font-size: 26px; font-weight: 700; }
+.gate-driver { font-size: 18px; }
+.gate-side { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.gate-btn { font-size: 18px; padding: 12px 22px; }
+
+/* W4 #27: @wzmianka w wiadomościach kontenera */
+.mention {
+  color: var(--accent); font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 4px; padding: 0 3px;
+}
+
+/* W4 #23/#30: matryca powiadomień + dziennik zmian */
+.rules-table td, .rules-table th { text-align: center; }
+.rules-table td:first-child, .rules-table th:first-child { text-align: left; }
+.feed-old { color: var(--muted); text-decoration: line-through; }
+
+/* deep-link z pulpitu: chwilowe podświetlenie panelu docelowego (?akcja=) */
+@keyframes deepTargetPulse { from { box-shadow: 0 0 0 3px var(--accent); } to { box-shadow: 0 0 0 3px transparent; } }
+.deep-target { animation: deepTargetPulse 2.2s ease-out; border-radius: 8px; scroll-margin-top: 80px; }
+
+/* karta kontenera: 2 kolumny od 1280px — krótsza strona, pola nie rozciągają się na 1400px */
+.card-cols { display: block; }
+@media (min-width: 1280px) {
+  .card-cols { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(340px, 1fr); gap: 16px; align-items: start; }
+  .card-main, .card-side { min-width: 0; }
+  .card-cols .panel { margin-top: 0; }
+  .card-main > * + *, .card-side > * + * { margin-top: 16px; }
+}
+
+/* ---- Nagłówek aplikacji (2026-09-23): jedna linia, spokojny chrome ---- */
+.topnav { flex-wrap: nowrap; gap: 4px; padding: 6px 16px; min-height: 56px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.tn-menu { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.tn-link, .tn-group-btn { padding: 8px 11px; font-size: 14px; white-space: nowrap; border-radius: 6px; }
+.tn-link.active, .tn-group.has-active > .tn-group-btn { background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 -2px 0 #5cc8d2; }
+.tn-right { flex-wrap: nowrap; gap: 8px; }
+.tn-drop { border-radius: 8px; }
+.tn-drop-right { left: auto; right: 0; min-width: 240px; }
+/* menu użytkownika */
+.tn-usermenu .tn-user {
+  display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
+  background: transparent; border: 0; color: inherit; font: inherit; cursor: pointer;
+}
+.tn-usermenu .tn-user:hover, .tn-usermenu.open .tn-user { background: rgba(255, 255, 255, 0.09); }
+.tn-drop .tn-watch-only { cursor: pointer; }
+.tn-drop-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+/* C25: nagłówek menu (imię + rola) i pozycje jako lista z ikoną i podpisem */
+.tn-drop-head { display: flex; flex-direction: column; padding: 6px 10px 8px; margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: var(--chrome-text); line-height: 1.25; }
+.tn-drop-head small { opacity: 0.75; font-size: var(--fs-xs); }
+.tn-drop .tn-lang { cursor: default; }
+.tn-drop .tn-lang .sb-lang { margin-left: auto; }
+.tn-drop .tn-theme-toggle.labelled { width: auto; height: auto; justify-content: flex-start; border: 0;
+  background: transparent; color: inherit; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.tn-logout-item { border: 0; background: transparent; font: inherit; font-size: 14px; cursor: pointer; text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 4px; padding-top: 10px; color: #ffb4ab; }
+/* miejsce dla menu: zegary tylko na szerokich ekranach, status = sama kropka,
+   poniżej 1600px menu użytkownika skraca się do awatara (imię w podpowiedzi przeglądarki) */
+.tn-online { display: none; }
+.tn-link, .tn-group-btn { padding: 8px 9px; }
+@media (max-width: 1599px) {
+  .tn-usermenu .sb-user-txt { display: none; }
+}
+@media (max-width: 1279px) {
+  .topnav .worldclock { display: none; }
+}
+
+/* ---- Pasek 48 px (2026-09-25, odchudzenie kolejki PR A): więcej wierszy danych na ekranie ---- */
+@media (min-width: 901px) {
+  .topnav { height: 48px; min-height: 0; padding: 0 16px; box-sizing: border-box; }
+}
+.tn-brand .sb-logo { width: 28px; height: 28px; }
+.tn-brand .sb-brand-txt b { font-size: 15px; }
+.tn-link, .tn-group-btn { padding: 6px 9px; }
+.tn-usermenu .tn-user { padding: 2px 6px; }
+.topnav .sb-avatar { width: 30px; height: 30px; font-size: 12px; }
+/* < 1440 px: pozycje nawigacji jako same ikony (nazwa w title/aria-label), etykieta tylko przy aktywnej */
+@media (max-width: 1439px) {
+  .tn-link:not(.active) .tn-label { display: none; }
+}
+
+/* ---- Telefon (≤900px): menu w drugiej linii z przewijaniem w bok — bez tego .tn-menu
+   (overflow-x:auto, nowrap) kurczyło się do 0 i menu znikało całkiem ---- */
+@media (max-width: 900px) {
+  .topnav { flex-wrap: wrap; }
+  .tn-menu { order: 3; flex: 1 0 100%; }
+  .tn-right { margin-left: auto; width: auto; order: 2; }
+
+}
+
+/* dark: linki i kontrolki kolejki, które miały jasne inki pod jasne tło (1.7–2.4:1) */
+:root[data-theme='dark'] main a:not(.btn):not(.tn-link) { color: var(--accent-ink); }
+:root[data-theme='dark'] .lock-btn { background: var(--panel); color: var(--accent-ink); }
+:root[data-theme='dark'] .qs-late.on { color: #ff9b91; }
+:root[data-theme='dark'] .urg.u1 .lv { color: #6fcf97; }
+
+/* ---- Review widoków 2026-09-23: minimum 12px dla drobnych napisów kolejki (było 9.6–11.5px) ---- */
+.tile-cols, .tile-cols .hdr-filter, .day-banner .iso, .day-banner .count, .day-banner.empty .weekday,
+.day-banner.empty .iso, .day-banner.empty .count, .band-chip b, .qsc-wh-chip b,
+.queue-summary.compact .qsc-total small, .queue-summary.compact .qsc-total em,
+.urg .lv, .urg em, .tile-board.acme .tile .plan-note, .queue-footer, .week-rail small, .week-rail em,
+.queue-toolbar .btn.small { font-size: 12px; }
+
+/* Pulpit: lista działań na całą szerokość panelu */
+.ctl-actions table.grid { width: 100%; }
+/* telefon: filtry kolejki zawijają się zamiast przewijać w bok (ucinało „Ukryj weekendy") */
+@media (max-width: 768px) {
+  .queue-onebar { flex-wrap: wrap; overflow-x: visible; }
+  .queue-onebar .qsearch { flex: 1 1 100%; }
+}
+

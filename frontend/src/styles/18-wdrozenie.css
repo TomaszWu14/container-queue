@@ -1,0 +1,15 @@
+/* Ekran wdrożenia (DeployWatch.tsx): zasłania aplikację, dopóki serwer nie wróci; pasek „nowa wersja” */
+.deploy-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: var(--sp-4);
+                  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(2px); }
+.deploy-card { max-width: 440px; width: 100%; display: grid; justify-items: center; gap: var(--sp-2); text-align: center;
+               background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-md);
+               padding: var(--sp-5); box-shadow: var(--shadow-3); }
+.deploy-card h2 { margin: 0; font-size: var(--fs-lg); line-height: var(--lh-lg); }
+.deploy-card p { margin: 0; color: var(--text-muted); }
+.deploy-card .deploy-long { color: var(--text); }
+.deploy-card a { color: var(--accent-ink); font-weight: 600; user-select: all; word-break: break-all; }
+.deploy-spin { color: var(--accent); animation: deploy-spin 1s linear infinite; }
+@keyframes deploy-spin { to { transform: rotate(360deg); } }
+.deploy-banner { position: fixed; left: 50%; bottom: var(--sp-4); transform: translateX(-50%); z-index: 9000;
+                 display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3);
+                 background: var(--chrome); color: var(--chrome-text); border-radius: var(--r-md); box-shadow: var(--shadow-2); }

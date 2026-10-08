@@ -1,0 +1,17 @@
+Dzień dobry,
+
+{% if kind == "stage1" %}prosimy o potwierdzenie terminów dostaw poniższych kontenerów (zlecenie awizacji nr {{ request_id }}, {{ company }}).
+{% elif kind == "rejected" %}nie możemy zatwierdzić przesłanego potwierdzenia dostaw (zlecenie nr {{ request_id }}, {{ company }}).
+Komentarz: {{ comment }}
+Prosimy o ponowne wypełnienie formularza — poprzedni link jest już nieaktywny.
+{% else %}terminy dostaw zostały zatwierdzone (zlecenie nr {{ request_id }}, {{ company }}). Prosimy o dane kierowców.
+{% endif %}
+{% for c in containers %}- {{ c.no }} | {{ c.vessel }} | {{ c.date }}{% if c.slot %} {{ c.slot }}{% endif %} | {{ c.warehouse }}
+{% endfor %}{% if note %}
+Uwagi: {{ note }}
+{% endif %}
+Formularz: {{ link }}
+Link jest jednorazowy i ważny do {{ expires }}.
+
+Pozdrawiamy,
+{{ operator }}{% if operator_email %} <{{ operator_email }}>{% endif %}

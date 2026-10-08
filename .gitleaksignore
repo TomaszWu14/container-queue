@@ -1,0 +1,9 @@
+# Fałszywe alarmy gitleaks: hasła/tokeny testowe w backend/tests (nie są sekretami)
+backend/tests/conftest.py:generic-api-key:22
+backend/tests/test_automation.py:generic-api-key:32
+backend/tests/test_automation.py:generic-api-key:87
+backend/tests/test_obs011_beacon_notifications.py:generic-api-key:9
+backend/tests/test_master_quality.py:generic-api-key:51
+backend/tests/test_import_autodetect.py:generic-api-key:92
+backend/tests/test_login_limiter.py:generic-api-key:11
+backend/tests/test_log_file.py:generic-api-key:12

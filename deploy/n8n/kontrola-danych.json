@@ -1,0 +1,203 @@
+{
+  "name": "TIMPORYE — kontrola danych (bez PO / ETA / dokumentów)",
+  "nodes": [
+    {
+      "id": "a1",
+      "name": "Codziennie 7:00 (pn–pt)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a2",
+      "name": "Jakość danych",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TIMPORYE token"
+        }
+      },
+      "parameters": {
+        "url": "http://gateway/api/master-data/quality",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "a3",
+      "name": "Braki dokumentów",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "TIMPORYE token"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "parameters": {
+        "url": "http://gateway/api/customs/docs-gaps",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      }
+    },
+    {
+      "id": "a4",
+      "name": "Złóż raport",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Składa jeden mail z trzech list: bez PO, bez ETA (+ bez magazynu) i braki dokumentów.\nconst PANEL = 'http://192.0.2.10:81';   // adres panelu dla linków w mailu\nconst RULES = {\n  containers_no_po: 'Kontenery w obiegu bez numeru zamówienia (PO)',\n  containers_no_eta: 'Kontenery w transporcie / porcie bez ETA',\n  containers_no_warehouse: 'Kontenery bez magazynu ze słownika',\n};\nconst esc = s => String(s ?? '').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));\nconst link = (id, label) => `<a href=\"${PANEL}/kontenery/${id}\">${esc(label)}</a>`;\n\nconst quality = $('Jakość danych').first().json;\nconst gaps = $('Braki dokumentów').all().map(i => i.json).filter(g => g.container_no);\n\nlet total = 0;\nconst parts = [];\nfor (const issue of quality.issues || []) {\n  if (!RULES[issue.key] || !issue.count) continue;\n  total += issue.count;\n  const more = issue.count > issue.items.length ? `<li>… i ${issue.count - issue.items.length} więcej (pełna lista: Master data → Jakość danych)</li>` : '';\n  parts.push(`<h3>${RULES[issue.key]} (${issue.count})</h3><ul>` +\n    issue.items.map(i => `<li>${link(i.id, i.label)}</li>`).join('') + more + '</ul>');\n}\nif (gaps.length) {\n  total += gaps.length;\n  parts.push(`<h3>Brakujące dokumenty przed ETA (${gaps.length})</h3><ul>` +\n    gaps.map(g => `<li>${link(g.id, g.container_no)} — ETA ${esc(g.eta || '?')}: brak ${esc((g.missing || []).join(', '))}</li>`).join('') + '</ul>');\n}\nconst today = new Date().toISOString().slice(0, 10);\nreturn [{ json: {\n  total,\n  subject: `TIMPORYE — ${total} braków w danych do uzupełnienia (${today})`,\n  html: `<p>Dzień dobry, poniżej kontenery z brakami. Kliknij numer, żeby otworzyć kartę w panelu.</p>${parts.join('')}<p style=\"color:#888\">Raport automatyczny z n8n (workflow „Kontrola danych”).</p>`,\n} }];"
+      }
+    },
+    {
+      "id": "a5",
+      "name": "Są braki?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a6",
+      "name": "Wyślij maila",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        -80
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "",
+          "name": "SMTP firmowy"
+        }
+      },
+      "parameters": {
+        "fromEmail": "timporye@TWOJA-FIRMA.pl",
+        "toEmail": "logistyka@TWOJA-FIRMA.pl",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Codziennie 7:00 (pn–pt)": {
+      "main": [
+        [
+          {
+            "node": "Jakość danych",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jakość danych": {
+      "main": [
+        [
+          {
+            "node": "Braki dokumentów",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Braki dokumentów": {
+      "main": [
+        [
+          {
+            "node": "Złóż raport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Złóż raport": {
+      "main": [
+        [
+          {
+            "node": "Są braki?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Są braki?": {
+      "main": [
+        [
+          {
+            "node": "Wyślij maila",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Warsaw"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,10 @@
+/* Okno porównania draftu SAD (SadCompareModal): tabela + strony PDF obok; wąski ekran — pod spodem */
+.sad-compare { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.sad-pages { display: grid; gap: 8px; max-height: 72vh; overflow-y: auto; }
+.sad-pages img { width: 100%; height: auto; border: 1px solid var(--border); border-radius: 4px; }
+.sad-head { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; }
+.sad-table { overflow-x: auto; }
+.sad-compare .num { text-align: right; white-space: nowrap; }
+.sad-ok { color: var(--good); }
+.sad-warn { color: var(--danger); }
+@media (max-width: 900px) { .sad-compare { grid-template-columns: 1fr; } }

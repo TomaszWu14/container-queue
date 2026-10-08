@@ -1,0 +1,42 @@
+graph TD
+    subgraph ZAK["Zakupy"]
+        S0([Zamówienie w arkuszu ETD]) --> IETD[Import ETD — upsert PO,<br/>filtr od daty]
+    end
+    subgraph LOG["Logistyka / Admin"]
+        IETD --> POQ[PO w kolejce — wczesny etap,<br/>bez numeru kontenera]
+        POQ --> NUM{{Armator nadaje numer}}
+        NUM --> KONT[Kontener: ISO 6346,<br/>auto-link PO, ZAPOWIEDZIANY]
+        KONT --> SPLIT{tory równoległe}
+        SPLIT -->|odprawa| ZLEC[Zlecenie odprawy → ZLECONA<br/>dokumenty: BRAK→ZAŁĄCZONE→WYSŁANE]
+        JOIN{przybył + odprawiony<br/>+ transport gotowy} --> PLAN[Plan dostawy: propozycja ETA+4<br/>→ wysłanie do spedycji]
+        TRG{tranzyt?} -->|tak| TRD[Dostawa do klienta —<br/>DOSTARCZONY potwierdza logistyka]
+        TRD --> ETR([ZREALIZOWANY — tranzyt])
+    end
+    subgraph SYS["System — tracking i alerty"]
+        SPLIT -->|tracking| TRK[AIS — pozycje statków<br/>status zmieniany ręcznie]
+        TRK --> WT{{Wypłynięcie → W_TRANSPORCIE}}
+        WT --> WP{{Przybycie → W_PORCIE<br/>start zegara demurrage}}
+        WP --> JOIN
+        WT -.minęło ETA.-> OPZ[/flaga OPÓŹNIONY/]
+        WP -.ETA + dni wolne.-> DEM[/alert DEMURRAGE/]
+    end
+    subgraph SPE["Spedycja"]
+        SPLIT -->|transport| ZT[Zlecenie: wystawione →<br/>zaakceptowane / odrzucone]
+        ZT --> RE[Realizacja: dane kierowcy,<br/>pliki CMR, wiadomości]
+        RE --> WYK[Wykonane → potwierdzone<br/>przez logistykę]
+        WYK --> JOIN
+        PLAN --> POT[Potwierdzenie daty: portal /<br/>formularz → AWIZOWANY,<br/>limit dzienny, kalendarz PL/PT]
+        POT --> TRG
+    end
+    subgraph CEL["Agencja celna"]
+        ZLEC --> ODP[DOKUMENTY_KOMPLETNE →<br/>DRAFT → ODPRAWIONY]
+        ODP --> REW{rewizja?}
+        REW -->|tak| RWZ[REWIZJA — wstrzymany,<br/>alert po N dniach]
+        RWZ --> ODP
+        REW -->|nie| JOIN
+    end
+    subgraph MAG["Magazyn"]
+        TRG -->|nie| ROZ[W_DOSTAWIE →<br/>rozładunek, karta]
+        ROZ --> DST[Magazyn potwierdza DOSTARCZONY<br/>→ ZREALIZOWANY]
+        DST --> ARC([Archiwum + ew. reklamacja])
+    end

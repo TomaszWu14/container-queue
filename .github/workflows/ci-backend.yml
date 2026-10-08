@@ -1,0 +1,67 @@
+name: CI — backend
+
+# Oszczędność minut Actions: pytest odpala się tylko przy PR do main, który
+# rusza kod backendu (filtr paths), i tylko na żądanie. Kolejny push do tego
+# samego PR-a ubija poprzedni bieg (concurrency).
+# Drafty nie odpalają CI (oszczędność minut Actions): job rusza dopiero po
+# oznaczeniu PR jako „ready for review" (types: ready_for_review) albo przy pushu do
+# gotowego PR-a (synchronize). Draft = job pomijany bramką `if` (bez przydziału runnera).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'                 # test_workflows_ci: runs-on, nazwy checków w REQUIRED
+      - 'scripts/check_file_lengths.py'
+      - 'frontend/src/holidays.snapshot.json'   # wspólny snapshot świąt (test_holidays_snapshot)
+      - 'tests/permissions.yaml'                # macierz uprawnień (test_permissions_matrix)
+  workflow_dispatch:
+
+concurrency:
+  # draft w osobnej grupie — nie anuluje biegu „ready” (wyścig draft→ready, PR #796; security.yml)
+  group: ci-backend-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    # draft: inna nazwa checku — pominięty bieg nie przesłoni wyniku w automerge (REQUIRED)
+    name: ${{ github.event.pull_request.draft && 'Backend — pytest (draft — pominięty)' || 'Backend — pytest' }}
+    runs-on: ubuntu-latest
+    # Normalny przebieg kilka min (równolegle); bezpiecznik ubija sporadyczny zawis (był 28-40 min)
+    # szybkim czerwonym zamiast wisieć do domyślnych 6h.
+    timeout-minutes: 20
+    # pomijaj drafty; workflow_dispatch nie ma pull_request → wyrażenie = true (rusza)
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      # pokrycie (TEST-005): linie app/ z tabelą w logu; próg w pyproject [tool.coverage.report].
+      # sysmon (Python 3.12) = narzut kilku %; pomiar gałęzi wymaga starego tracera (znacznie
+      # wolniej), więc w PR mierzymy linie. Lokalny `pytest` bez zmian (bez --cov).
+      PYTEST_ADDOPTS: --cov --cov-report=term:skip-covered
+      COVERAGE_CORE: sysmon
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 ../scripts/check_file_lengths.py   # limit 500 linii/plik
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      # runtime + narzędzia testów i lintu (pytest, ruff); obraz dostaje tylko requirements.txt (BUILD-005)
+      - run: pip install --require-hashes -r requirements.txt -r requirements-dev.txt
+      - run: python -m ruff check .   # lint wg pyproject.toml [tool.ruff] (CODE-001)
+      # typy (CODE-003): nowe błędy mypy = czerwony; znane w mypy-baseline.txt (może tylko maleć)
+      # mypy z locka requirements-dev.txt (cache pip) — bez osobnej instalacji przy każdym biegu
+      # cache mypy POZA workspace (checkout go czyści), osobny na runner (bez równoległych zapisów):
+      # przyrostowo ~2 s zamiast ~30 s; mypy sam unieważnia cache po zmianie wersji/konfiguracji
+      - run: python scripts/mypy_baseline.py
+        env:
+          MYPY_CACHE_DIR: .mypy_cache
+      # -n auto: tyle workerów, ile rdzeni runnera (baza SQLite per worker — tests/conftest.py);
+      # 2026-09-29: 11:36 sekwencyjnie → 3:14 na 12 rdzeniach (+ bcrypt 4 w testach, #885)
+      - run: echo "rdzenie runnera = $(nproc)" && python -m pytest tests/ -q -n auto

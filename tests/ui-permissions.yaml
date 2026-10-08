@@ -1,0 +1,151 @@
+# Widoczność UI TIMPORYE per rola — ETAP 0, SZKIC do akceptacji.
+# Źródło: analiza frontend/src (routing.tsx canAccess, Sidebar.tsx, sections.ts, warunki user.role)
+# na origin/main 2026-09-26. Każdy wpis ma odnośnik plik:linia do warunku w kodzie.
+#
+# Legenda: true = widoczne/dostępne, false = ukryte (trasa → ekran 403 z Guarded),
+#          '?' = niejednoznaczne / prawdopodobny błąd → pytanie do właściciela.
+# E = admin|logistics (canEdit). view_all_companies (flaga konta) opisana osobno.
+roles: [admin, logistics, warehouse, forwarder, customs, purchasing]
+
+# Ekran startowy po zalogowaniu (routing.tsx:85 homeFor)
+home:
+  admin: /pulpit
+  logistics: /kolejka
+  warehouse: /kolejka        # WarehouseQueuePage (App.tsx:148)
+  forwarder: /pulpit
+  customs: /kolejka          # renderuje CustomsPage (App.tsx:150)
+  purchasing: /kolejka
+
+# Trasy frontendu → dostęp (routing.tsx:48-80, App.tsx)
+routes:
+  /pulpit:                {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  /kolejka:               {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}
+  /kolejka/archiwum:      {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  /profil:                {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}
+  /wiedza:                {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}
+  /kontenery/:id:         {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}   # bez guarda — zakres pilnuje API (404 dla obcego)
+  /kontenery/:id/karta:   {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}   # bez guarda (stan obecny; brak decyzji — zakres pilnuje API)
+  /dostawcy/:id:          {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}   # bez guarda (stan obecny; brak decyzji — zakres pilnuje API)
+  /brama:                 {admin: true, logistics: true, warehouse: true, forwarder: false, customs: false, purchasing: false}
+  /awizacje/propozycje:   {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /zlecenia-spedycyjne:   {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /specjalna-troska:      {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /wywolania-dlt:         {admin: true, logistics: true, warehouse: true,  forwarder: false, customs: false, purchasing: false}
+  /analityka:             {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /dziennik-zmian:        {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /master-data:           {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  /koszyk:                {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: true}
+  /kalendarz:             {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  /sledzenie:             {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  /reklamacje:            {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  /zamowienia:            {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: true}   # decyzja 2026-09-26: forwarder TAK (brak linku w menu = B-006)
+  /spedycja:              {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: true}
+  /wyceny:                {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  /odprawa:               {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}  # customs dostaje odprawę pod /kolejka
+  /administracja:         {admin: true, logistics: false, warehouse: false, forwarder: false, customs: false, purchasing: false}
+
+# Stare adresy → przekierowanie (routing.tsx:10-26); query i parametry zachowane
+redirects:
+  /dzis: /kolejka
+  /dashboard: /
+  /calendar: /kalendarz
+  /orders: /zamowienia
+  /forwarding: /spedycja
+  /customs: /odprawa
+  /quotes: /wyceny
+  /tracking: /sledzenie
+  /complaints: /reklamacje
+  /archive: /kolejka/archiwum
+  /container/:id: /kontenery/:id
+  /admin: /administracja
+
+# Menu boczne (Sidebar.tsx)
+nav:
+  Kolejka:               {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}   # customs: etykieta „Odprawa”
+  Pulpit:                {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  Kalendarz:             {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  Śledzenie:             {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  Spedycja:              {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: true}
+  Zamówienia:            {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: true}   # oczekiwane; dziś forwarder=false (B-006)
+  Zlecenia spedycyjne:   {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Propozycje awizacji:   {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Odprawa:               {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Specjalna troska:      {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Wywołania DLT:         {admin: true, logistics: true, warehouse: true,  forwarder: false, customs: false, purchasing: false}
+  Koszyk:                {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: true}
+  Brama:                 {admin: true, logistics: true, warehouse: true, forwarder: false, customs: false, purchasing: false}
+  Reklamacje:            {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}
+  Analiza rozładunków:   {admin: true, logistics: true, warehouse: true, forwarder: false, customs: false, purchasing: false}  # decyzja 2026-09-26; dziś admin || view_all_companies (B-007)
+  Analityka:             {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Dziennik zmian:        {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Master data:           {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  Wyceny:                {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  Archiwum:              {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}
+  Wiedza:                {admin: true, logistics: true, warehouse: true, forwarder: true, customs: true, purchasing: true}
+  Administracja:         {admin: true, logistics: false, warehouse: false, forwarder: false, customs: false, purchasing: false}
+
+# Sekcje pod własnymi adresami (pages/sections.ts:25-58; niewidoczna → 403 z SectionShell)
+sections:
+  admin_only:
+    administracja: [uzytkownicy, spolki, agencje-celne, spedytorzy, ustawienia, system, powiadomienia, log-logowan]
+    master-data: [klienci, materialy, armatorzy, punkty-kontroli, szablony-wysylki, problemy-dostaw,
+                  import-excel, import-po, import-marm, import-portow, import-dlt, audyt]
+  admin_logistics:
+    master-data: [dostawcy, jednostki-materialow, porty, porty-kontenerowe, magazyny, zamowienia-sap,
+                  cele-zapasu, statusy-sprawy-celnej, typy-dokumentow, jakosc-danych, dokumenty, podejrzane-faktury,
+                  mapowania-indeksow]
+  edit_in_master_data: admin   # useIsAdmin (masterdata/tabUtils.ts:9); wyjątek cele-zapasu: admin+logistics (MasterDataPage.tsx:245)
+
+# Kolejka (QueuePage + QueueFilterBar + TileMenus + BulkActionBar); warehouse ma osobny WarehouseQueuePage
+queue:
+  company_tabs_all:      {admin: true, logistics: view_all_companies, forwarder: view_all_companies, purchasing: view_all_companies}  # QueuePage.tsx:278
+  add_container:         {admin: true, logistics: true, forwarder: false, purchasing: false}   # QFB:133
+  edit_lock:             {admin: true, logistics: true, forwarder: false, purchasing: false}   # QFB:113
+  export_xlsx:           {admin: true, logistics: true, forwarder: true, purchasing: true}     # QFB:122
+  menu_found_order:      {admin: true, logistics: true, forwarder: false, purchasing: false}   # ⋯ tylko moduł borealis/cobalt
+  menu_clear_queue:      {admin: true, logistics: false, forwarder: false, purchasing: false}  # ⋯
+  bulk_bar:              {admin: true, logistics: true, forwarder: false, purchasing: false}   # status/magazyn/data/awizacja/wycena
+  bulk_delete:           {admin: true, logistics: false, forwarder: false, purchasing: false}  # BulkActionBar.tsx:94
+  row_menu:
+    rozwin:              {admin: true, logistics: true, forwarder: true, purchasing: true}
+    status:              {admin: true, logistics: true, forwarder: false, purchasing: false}
+    zmien_date:          {admin: true, logistics: true, forwarder: false, purchasing: false}   # TileMenus.tsx:101
+    zmien_magazyn:       {admin: true, logistics: true, forwarder: false, purchasing: false}   # :106, tylko gdy są opcje
+    obserwuj:            {admin: true, logistics: true, forwarder: true, purchasing: true}
+  drawer_upload_docs:    {admin: true, logistics: true, forwarder: true, purchasing: true}     # nie warehouse (DrawerTabs.tsx:53)
+  archive_zip:           {admin: true, logistics: true, forwarder: false, purchasing: false}   # QueuePage.tsx:315
+
+# Karta kontenera (ContainerPage.tsx)
+container_card:
+  special_flag:          {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}  # :199
+  edit:                  {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}  # :239
+  client_portal:         {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}  # :369
+  cmr:                   {admin: true, logistics: true, warehouse: true, forwarder: true, customs: false, purchasing: false}    # :217
+  unloaded_button:       {admin: false, logistics: false, warehouse: true, forwarder: false, customs: false, purchasing: false} # :225
+  change_status:         {admin: true, logistics: true, warehouse: true, forwarder: false, customs: false, purchasing: false}   # :231
+  customs_agency_panel:  {admin: true, logistics: true, warehouse: false, forwarder: false, customs: true, purchasing: false}    # :303
+  driver_edit:           {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: false}   # :305
+  driver_readonly:       {admin: false, logistics: false, warehouse: true, forwarder: false, customs: false, purchasing: false} # :306
+  order_receipt:         {admin: true, logistics: true, warehouse: true, forwarder: false, customs: false, purchasing: true}    # :310
+  invoices_ocr_purchasing: {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: true}  # :319,324,373
+  packing_3d:            {admin: true, logistics: true, warehouse: false, forwarder: true, customs: false, purchasing: true}
+  attachments_upload:    {admin: true, logistics: true, warehouse: false, forwarder: true, customs: true, purchasing: true}     # collaboration.tsx:270 — '?' customs
+  send_docs_to_agency:   {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: true}    # + kontener ma customs_agency_id
+
+# Inne ekrany
+other:
+  forwarding_new_order:  {admin: true, logistics: true, forwarder: false, purchasing: false}   # ForwardingPage.tsx:250 — '?' purchasing widzi ekran
+  bl_invoice_approve:    {admin: true, logistics: false}                                       # FreightInvoicesPanel.tsx:29
+  customs_assign:        {admin: true, logistics: true, customs: false}                        # CustomsPage.tsx:253
+  customs_status_change: {admin: true, logistics: true, customs: true}
+  quotes_csv_export:     {admin: true, logistics: true, forwarder: false}                      # QuotesPage.tsx:79
+  gate_checkin:          {admin: true, logistics: true, warehouse: true}
+  dlt_calls_actions:     {admin: true, logistics: true}                                        # PalletCallsPage.tsx:79
+  dlt_company_select_powerbi: {admin: true, logistics: false}
+  complaint_edit:        {admin: true, logistics: true, warehouse: false, forwarder: false}    # ComplaintDetailPage.tsx:29
+  complaint_create:      {admin: true, logistics: true, warehouse: true, forwarder: true}
+  knowledge_edit:        {admin: true, logistics: true, warehouse: false, forwarder: false, customs: false, purchasing: false}
+  vessel_photo:          {admin: true, logistics: false, warehouse: false, forwarder: false}
+  supplier_doc_profile_edit: {admin: true, logistics: false, purchasing: false}
+  dashboard_invoice_tile: {admin: true, logistics: false, forwarder: false}
+  impersonation_banner:  "tylko gdy user.impersonated (App.tsx:128)"

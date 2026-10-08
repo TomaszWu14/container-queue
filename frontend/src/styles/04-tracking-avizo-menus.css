@@ -1,0 +1,359 @@
+/* mapa trackingu, panel kontenera, awizacje, menu Widok/Eksport, tabele — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* mapa trackingowa — ciemna rama wg makiety Tracking.html */
+.map-wrap {
+  position: relative; overflow: hidden; border-radius: 12px;
+  border: 1px solid #0a1b2e; background: #061225;
+  box-shadow: 0 14px 34px rgba(16, 38, 63, 0.28);
+}
+.world-map { display: block; width: 100%; height: auto; }
+/* mapa wektorowa przy zbliżeniu (2D i globus — vectorMap.ts). Ląd ciepły/neutralny, morze
+   wyraźnie głębsze i chłodne; odcienie państw i krajów na trasie TYLKO ciepłe (nigdy błękit —
+   inaczej ląd zlewa się z morzem). Wybrzeże: ciemniejszy ton lądu, rysowane nad wypełnieniami. */
+:root {
+  --map-vec-sea: #97bcd8; --map-vec-land: #f3eee2;
+  --map-vec-border: #a39479; --map-vec-coast: #6f6352;
+  --map-vec-tint-1: rgba(214, 184, 128, .30); --map-vec-tint-2: rgba(170, 186, 128, .30);
+  --map-vec-tint-3: rgba(222, 158, 124, .24); --map-vec-tint-4: rgba(232, 204, 146, .34);
+  --map-vec-tint-5: rgba(188, 168, 138, .26); --map-vec-tint-6: rgba(206, 196, 138, .30);
+  --map-vec-hl-dest: rgba(236, 170, 30, .42); --map-vec-hl-origin: rgba(224, 124, 52, .30);
+  --map-vec-hl-transit: rgba(196, 160, 96, .26);
+  --map-vec-label: #3e3527; --map-vec-halo: rgba(250, 247, 240, .85);
+  --map-vec-relief: .5;   /* siła cieniowanej rzeźby (hard-light, reliefTiles.ts) */
+}
+:root[data-theme='dark'], .theme-dark {
+  --map-vec-sea: #0a1a2c; --map-vec-land: #2a2a27;
+  --map-vec-border: #625b4d; --map-vec-coast: #8d846f;
+  --map-vec-tint-1: rgba(214, 184, 128, .10); --map-vec-tint-2: rgba(170, 186, 128, .10);
+  --map-vec-tint-3: rgba(222, 158, 124, .08); --map-vec-tint-4: rgba(232, 204, 146, .11);
+  --map-vec-tint-5: rgba(188, 168, 138, .09); --map-vec-tint-6: rgba(206, 196, 138, .10);
+  --map-vec-hl-dest: rgba(255, 196, 70, .30); --map-vec-hl-origin: rgba(235, 146, 64, .24);
+  --map-vec-hl-transit: rgba(206, 176, 112, .10);
+  --map-vec-label: rgba(236, 228, 212, .92); --map-vec-halo: rgba(12, 14, 18, .8);
+  --map-vec-relief: .6;
+}
+/* etykiety na mapie wektorowej: kolor tekstu i obwódka z motywu (zamiast granatowej „pigułki") */
+.world-map.is-vector .map-labels text { fill: var(--map-vec-label); --map-label-halo: var(--map-vec-halo); }
+/* globus 3D — kontener sceny three; canvas wypełnia szerokość, proporcja 2:1 jak mapa */
+.globe-wrap { width: 100%; aspect-ratio: 2 / 1; min-height: 320px; background: #04080f; }
+.globe-wrap canvas { display: block; width: 100% !important; height: auto !important; }
+/* przełącznik trybu mapy 2D/3D — lewy górny róg */
+.map-mode-toggle {
+  position: absolute; left: 12px; top: 12px; padding: 6px 12px;
+  border-radius: 8px; border: 1px solid #2b4a6b; background: rgba(9, 24, 42, 0.93);
+  color: #dfe9f6; font-weight: 600; font-size: 13px; cursor: pointer;
+  box-shadow: 0 8px 22px rgba(3, 10, 20, 0.45);
+}
+.map-mode-toggle:hover { background: #12314f; }
+/* szklany panel pływający na mapie (makieta: .panel) */
+.map-glass {
+  position: absolute; background: rgba(9, 24, 42, 0.93); border: 1px solid #2b4a6b;
+  border-radius: 12px; box-shadow: 0 18px 44px rgba(3, 10, 20, 0.55);
+  backdrop-filter: blur(6px); color: #dfe9f6;
+}
+/* prawa kolumna mapy: warstwy nad legendą, nigdy na sobie (C30); nadmiar przewija się w kolumnie */
+.map-side {
+  position: absolute; right: 12px; top: 12px; bottom: 12px; width: 250px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-2);
+  overflow-y: auto; pointer-events: none;
+}
+.map-side > .map-glass { position: static; pointer-events: auto; flex: none; }
+.map-side > .map-legend-glass { margin-top: auto; }
+.map-layers {
+  right: 12px; top: 12px; max-width: 240px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 7px; font-size: 13px;
+}
+.map-layers b {
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #7fa5d0; font-weight: 600;
+}
+.map-layers label { display: flex; align-items: center; gap: 8px; color: #cfe0f5; cursor: pointer; }
+.map-layers input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; }
+/* B9: panel zwijany (<details>) — nagłówek „Warstwy” w summary, treść w kolumnie */
+details.map-layers { display: block; }
+.map-layers summary { cursor: pointer; list-style-position: inside; }
+.map-layers[open] summary { margin-bottom: 7px; }
+.map-layers-body { display: flex; flex-direction: column; gap: 7px; }
+/* presety WIDOK (Europa/Azja/Suez/Cały glob) — skok kamery globu */
+.map-views { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,.12); }
+.map-views-btns { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.map-views-btns button { font-size: 12px; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: #eaf4ff; cursor: pointer; }
+.map-views-btns button:hover { background: rgba(255,255,255,.2); }
+.map-zoombar { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; }
+.map-zoombar button {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid #2b4a6b;
+  background: rgba(9, 24, 42, 0.93); color: #dfe9f6; font-weight: 700; font-size: 15px;
+  cursor: pointer; line-height: 1;
+}
+.map-zoombar button:hover { background: #12314f; }
+.map-zoombar button.wide { width: auto; padding: 0 12px; font-size: 13px; font-weight: 600; }
+.map-tooltip {
+  position: absolute; top: 14px; left: 14px; background: rgba(13, 31, 54, 0.94);
+  color: #fff; border: 1px solid #3a5c7e; border-radius: 3px; padding: 10px 14px;
+  font-size: 13px; line-height: 1.5; pointer-events: none; max-width: 340px;
+}
+/* przypięty (tap/klik/klawiatura) — klikalny, żeby zadziałały ✕ i „Otwórz kontener" */
+.map-tooltip.pinned { pointer-events: auto; padding-right: 30px; }
+.map-tooltip-close {
+  position: absolute; top: 6px; right: 8px; background: none; border: none;
+  color: #fff; font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 4px;
+}
+.map-tooltip-close:hover { color: #ffd; }
+
+/* karta statku — rozbudowany panel po kliku statku (2D i globus) */
+.vessel-card { width: 340px; max-height: 78%; overflow-y: auto; }
+.vessel-photo {
+  display: block; width: calc(100% + 28px); margin: -10px -14px 8px; height: 120px;
+  object-fit: cover; border-bottom: 1px solid #3a5c7e;
+}
+.vessel-card .vessel-photo { border-radius: 3px 3px 0 0; }
+.vc-photo-actions { gap: 6px; margin-bottom: 6px; }
+.vc-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin: 8px 0 6px;
+}
+.vc-param { display: flex; flex-direction: column; }
+.vc-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #8fb0cf; }
+.vc-value { font-size: 13px; }
+.vc-cargo-toggle {
+  display: block; width: 100%; text-align: left; margin-top: 8px; padding: 6px 8px;
+  background: rgba(47, 142, 247, 0.12); border: 1px solid #3a5c7e; border-radius: 4px;
+  color: inherit; font: inherit; cursor: pointer;
+}
+.vc-cargo-toggle:hover { background: rgba(47, 142, 247, 0.22); }
+.vc-chevron { float: right; }
+.vc-cargo { margin-top: 6px; display: grid; gap: 6px; }
+.vc-container { border-top: 1px solid rgba(58, 92, 126, 0.6); padding-top: 5px; }
+.vc-container-head { gap: 6px; flex-wrap: wrap; align-items: center; }
+.vc-container-head .watch-star { padding: 2px 4px; color: var(--muted); }
+.vc-container-head .watch-star.on { color: var(--accent-ink); }
+.vc-items-toggle {
+  background: none; border: none; color: #9fd6ff; cursor: pointer; font-size: 13px;
+  padding: 0 2px;
+}
+.vc-items { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 4px; }
+.vc-items th { text-align: left; color: #8fb0cf; font-weight: 600; padding: 2px 6px 2px 0; }
+.vc-items td { padding: 2px 6px 2px 0; border-top: 1px solid rgba(58, 92, 126, 0.4); }
+
+.cont-detail {
+  border: 1px solid var(--accent); border-top: 0; border-radius: 0 0 6px 6px;
+  background: var(--panel); padding: 14px 16px; margin: 0 0 8px;
+}
+
+.cont-detail { position: sticky; left: 0; width: 100cqi; box-sizing: border-box; }
+.cd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cd-head > b { font-size: 17px; }
+.cd-head-actions { display: inline-flex; gap: 8px; }
+.cd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.cd-sec { min-width: 0; }
+.cd-sec > h4 {
+  margin: 0 0 8px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--muted-strong);
+}
+.cd-kv { display: flex; gap: 8px; font-size: 14px; padding: 2px 0; align-items: baseline; }
+.cd-kv > span:first-child { color: var(--muted); min-width: 92px; flex: 0 0 auto; }
+.cd-history { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; max-height: 200px; overflow-y: auto; }
+.cd-hist-row { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.cd-contacts { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.cd-tel { font-size: 14px; color: var(--accent-ink); text-decoration: none; }
+.cd-tel:hover { text-decoration: underline; }
+@media (max-width: 900px) { .cd-grid { grid-template-columns: 1fr; } }
+
+/* badge „specjalny" (🚩) — kolejka i karta kontenera */
+.badge.special { background: var(--danger-bg); color: var(--danger-ink); border: 1px solid color-mix(in srgb, var(--danger-ink) 35%, transparent); }
+.avizo-btn { background: #b54708; }
+.avizo-btn:hover { filter: brightness(1.08); }
+.avizo-page { max-width: 1100px; margin: 0 auto; }
+.avizo-head { margin-bottom: 16px; }
+.avizo-head .brand-dark { font-weight: 800; letter-spacing: 0.06em; color: #10263f; }
+.avizo-head h1 { margin: 6px 0; font-size: 22px; }
+.avizo-grid input { width: 100%; min-width: 110px; padding: 5px 7px; }
+.avizo-grid tr.avizo-off td { color: var(--muted); }
+/* Avizo na telefonie: 10-kolumnowa tabela → karty per-kontener (publiczny mobile) */
+@media (max-width: 640px) {
+  .avizo-grid thead { display: none; }
+  .avizo-grid, .avizo-grid tbody, .avizo-grid tr, .avizo-grid td { display: block; width: 100%; }
+  .avizo-grid tr {
+    border: 1px solid var(--border); border-radius: 3px;
+    margin-bottom: 12px; padding: 6px 10px; background: var(--panel);
+  }
+  .avizo-grid td {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    border: none; padding: 6px 0; text-align: right;
+  }
+  .avizo-grid td::before {
+    content: attr(data-label); font-weight: 600; color: var(--muted);
+    text-align: left; flex: 0 0 42%;
+  }
+  .avizo-grid td input { width: auto; flex: 1 1 auto; min-width: 0; }
+}
+.avizo-thanks h2 { margin-top: 0; }
+/* formularze awizacji etap 1/2 — karta per kontener (mobile-first), pola w siatce */
+.avizo-page { padding-left: 16px; padding-right: 16px; }
+.avizo-card { margin-bottom: 12px; }
+.avizo-card-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 10px; }
+.avizo-card-head b { font-size: 17px; }
+.avizo-choice { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; }
+.avizo-choice label { display: inline-flex; gap: 6px; align-items: center; min-height: 32px; cursor: pointer; }
+.avizo-fields { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.avizo-fields label { display: grid; gap: 4px; font-size: 14px; color: var(--muted-strong); }
+.avizo-fields input, .avizo-fields select, .avizo-fields textarea { width: 100%; font-size: 16px; padding: 7px 9px; box-sizing: border-box; }
+.avizo-fields .avizo-wide { grid-column: 1 / -1; }
+.avizo-fields .error { font-size: 13px; }
+.avizo-rodo p { font-size: 13px; line-height: 1.45; margin: 6px 0 0; }
+/* panel Awizacje — szczegóły zlecenia pod listą */
+.avr-row { cursor: pointer; }
+.avr-row.selected td { background: var(--accent-soft); }
+.avr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin: 10px 0; }
+.avr-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--soft); }
+.avr-confirm textarea { min-width: 260px; flex: 1; }
+
+/* publiczna strona kierowcy (link z SMS) — mobile-first, duże cele dotykowe */
+.driver-page { max-width: 520px; margin: 0 auto; padding-top: 16px; }
+.driver-brand { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; color: var(--muted); }
+.driver-page .btn.driver-big { width: 100%; padding: 14px; font-size: 17px; justify-content: center; }
+.driver-page input[type="time"] { min-height: 46px; font-size: 16px; }
+
+/* tablica odpraw: pasek koloru statusu przy lewej krawędzi wiersza */
+table.grid tr.cs-row td:first-child { border-left: 4px solid transparent; }
+tr.cs-row-ZLECONA td:first-child { border-left-color: #b54708; }
+tr.cs-row-DOKUMENTY_KOMPLETNE td:first-child { border-left-color: #1d4ed8; }
+tr.cs-row-DRAFT_WYSLANY td:first-child { border-left-color: #86198f; }
+tr.cs-row-DRAFT_POTWIERDZONY td:first-child { border-left-color: #6d28d9; }
+tr.cs-row-ODPRAWIONY td:first-child { border-left-color: #0b7a5d; }
+tr.cs-row-ZWOLNIONY td:first-child { border-left-color: var(--success-ink); }
+tr.cs-row-REWIZJA td:first-child { border-left-color: #b91c1c; }
+
+.map-legend {
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  padding: 10px 4px; font-size: 13px; color: var(--text);
+}
+
+.import-modal { max-width: 980px; }
+.import-file { display: flex; flex-direction: column; gap: 6px; font-size: 14px;
+  color: var(--muted); margin-bottom: 12px; }
+/* FilePicker (UX-028): przycisk „Wybierz plik” + nazwa pliku; z podpisem — jak dawne .import-file */
+.file-pick { display: inline-flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.file-pick.with-caption { font-size: var(--fs-sm); color: var(--text-muted); }
+.file-pick-row { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.file-pick-name { color: var(--text); font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28ch; }
+.file-pick-name.muted { color: var(--text-muted); }
+.file-pick-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-2); }
+.import-modal .file-pick { margin-bottom: var(--sp-3); }
+.import-counts { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.import-rows { max-height: 46vh; overflow: auto; border: 1px solid var(--border);
+  border-radius: 3px; }
+.import-done { font-size: 16px; }
+
+table.analysis-grid th.wh-head { text-align: center; background: #f2f6fb; }
+/* prognoza magazynów: heatmapa % limitu (zielony <80%, bursztyn 80–100%, czerwony >100%) */
+table.forecast-grid td.fc-cell { text-align: center; min-width: 58px; line-height: 1.2; }
+table.forecast-grid td.fc-ok   { background: #dcf1e4; }
+table.forecast-grid td.fc-warn { background: #fef0c7; }
+table.forecast-grid td.fc-over { background: #fee2e2; color: #b91c1c; }
+table.analysis-grid td.strong, table.analysis-grid .strong { font-weight: 700; }
+table.analysis-grid td.over-limit { background: #fee2e2; color: #b91c1c; }
+table.analysis-grid tr.free-row td { background: #f3f4f6; color: var(--muted); }
+table.analysis-grid td.free-cell { color: #b91c1c; font-weight: 600; }
+
+.move-confirm { max-width: 560px; }
+.move-confirm .move-question { margin: 4px 0 12px; }
+.move-confirm table.grid { margin-bottom: 4px; }
+.move-confirm td.strong { font-weight: 700; }
+/* daty w oknie potwierdzenia przeniesienia — czcionka większa o 30% */
+.move-confirm .move-question b,
+.move-confirm .move-question .mono,
+.move-confirm td.date-cell { font-size: 18px; }
+.ctx-menu.date-menu input[type="date"] {
+  margin: 2px 4px 4px; padding: 8px; border: 1px solid var(--border);
+  border-radius: 3px; font-size: 15px; color: var(--text); background: var(--panel);
+}
+
+.tile-action-menu button { display: flex; align-items: center; gap: 8px; }
+.tile-action-menu button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+}
+/* wybór widocznych kolumn (§10.1) */
+.cols-picker { position: relative; display: inline-flex; }
+
+.cols-backdrop { position: fixed; inset: 0; z-index: 40; }
+.cols-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 41;
+  display: flex; flex-direction: column; gap: 2px; padding: 8px;
+  min-width: min(200px, calc(100vw - 24px)); max-width: calc(100vw - 16px);
+  max-height: 60vh; overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 14px 34px -12px rgba(13, 31, 54, 0.4);
+}
+.cols-menu label {
+  display: flex; align-items: center; gap: 8px; padding: 5px 7px;
+  border-radius: 3px; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+
+.cols-menu label:hover { background: var(--bg); }
+
+/* decyzja 17 — przycisk eksportu + strzałka z menu (bieżący widok / cała kolejka) */
+.export-split { position: relative; display: inline-flex; }
+.export-split .export-caret { padding: 0 8px; margin-left: -1px; }
+.export-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 41;
+  display: flex; flex-direction: column; min-width: 160px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 14px 34px -12px rgba(13, 31, 54, 0.4); overflow: hidden;
+}
+.export-menu button {
+  background: none; border: none; text-align: left; padding: 8px 12px;
+  font-size: 14px; cursor: pointer;
+}
+.export-menu button:hover { background: var(--bg); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500;
+  color: var(--accent-ink); background: var(--accent-soft); border: 1px solid var(--accent);
+  border-radius: 999px; padding: 3px 4px 3px 10px; max-width: 260px;
+}
+.chip-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 999px; border: none; background: none;
+  color: inherit; font-size: 13px; line-height: 1; cursor: pointer; padding: 0;
+}
+.chip-x:hover { background: rgba(0, 0, 0, 0.1); }
+.cols-menu label.locked { color: var(--muted); cursor: default; }
+
+/* ETA/ATD w jednej komórce — data rzeczywista na wierzchu, plan pod spodem */
+.eta-cell { display: flex; flex-direction: column; line-height: 1.15; }
+/* pasek postępu rejsu (ETD→ETA) pod datą — cienki, w kolorze akcentu */
+.voyage { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.voyage-bar {
+  flex: 1; min-width: 42px; max-width: 90px; height: 4px; border-radius: 999px;
+  background: var(--soft); overflow: hidden;   /* tor jak w makiecie */
+}
+.voyage-bar i {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--accent);   /* kolor nadpisywany inline wg postępu (zielony/niebieski/szary) */
+}
+.voyage small { font-size: 12px; }
+.eta-cell .atd-val { color: #047857; }
+.eta-cell small { font-size: 12px; }
+
+.tile .strong { font-weight: 700; }
+.tile .link-like { color: var(--accent-ink); font-weight: 500; }
+
+/* display: table jawnie — Tailwind 4 widzi słowo „grid” w kodzie i generuje utility .grid { display: grid },
+   które zamieniało każdą tabelę w siatkę CSS (thead/tbody = bloki liczone osobno → nagłówki nie nad
+   kolumnami, tabela na pół szerokości; audyt UI 2026-09-27, ~10 widoków). Reguła poza warstwą wygrywa. */
+table.grid { display: table; width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+table.grid th, table.grid td {
+  text-align: left; padding: 7px 10px;
+  border-top: 1px solid var(--border); border-right: 1px solid var(--border);
+}
+table.grid th:last-child, table.grid td:last-child { border-right: none; }
+table.grid th {
+  background: #fafbfd; color: var(--muted-strong); border-top: none;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+table.grid tr:hover td { background: #f5f8fd; }
+table.grid td.mono, .mono { font-family: var(--font-mono); }
+table.grid tr.clickable { cursor: pointer; }
+

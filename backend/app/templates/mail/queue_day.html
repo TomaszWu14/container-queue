@@ -1,0 +1,14 @@
+{% from "mail/_parts.html" import table_open, head_row, signature %}
+<div style='font-family:Calibri,Arial,sans-serif;font-size:14px'>
+<p>Dzień dobry,</p>
+<p>w załączeniu kolejka rozładunków na <b>{{ day|date_pl }}</b> ({{ warehouse_label }}).</p>
+{% include "mail/container_table.html" %}
+<p>Prosimy o odesłanie danych kierowców dla powyższych kontenerów:</p>
+{{ table_open() }}
+{{ head_row() }}
+<td>NR KONTENERA</td><td>IMIĘ I NAZWISKO KIEROWCY</td><td>NR DOWODU OSOBISTEGO</td>
+<td>NR CIĄGNIKA</td><td>NR NACZEPY</td><td>NR TELEFONU</td></tr>
+{% for c in containers %}<tr><td style='font-weight:bold'>{{ c.container_no }}</td><td></td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+</table>
+{{ signature() }}
+</div>

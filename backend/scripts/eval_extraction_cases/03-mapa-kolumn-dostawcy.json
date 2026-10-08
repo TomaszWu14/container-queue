@@ -1,0 +1,49 @@
+{
+ "name": "03-mapa-kolumn-dostawcy",
+ "column_map": "ref=Art; qty=Menge; net=Wert",
+ "pages": [
+  {
+   "text": "Rechnung\nINVOICE NO: DE-55/26",
+   "tables": [
+    [
+     [
+      "Pos",
+      "Art",
+      "Bezeichnung",
+      "Menge",
+      "Wert"
+     ],
+     [
+      "1",
+      "X-77",
+      "Tape",
+      "40",
+      "80.00"
+     ],
+     [
+      "2",
+      "X-78",
+      "Gauze",
+      "60",
+      "120.00"
+     ]
+    ]
+   ]
+  }
+ ],
+ "expected": {
+  "invoice_number": "DE-55/26",
+  "items": [
+   {
+    "ref": "X-77",
+    "qty": "40",
+    "net": "80"
+   },
+   {
+    "ref": "X-78",
+    "qty": "60",
+    "net": "120"
+   }
+  ]
+ }
+}

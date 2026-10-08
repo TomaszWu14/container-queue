@@ -1,0 +1,60 @@
+{
+ "name": "04-ocr-naglowek-pod-adresami",
+ "pages": [
+  {
+   "text": "SHIPPER: ACME LTD\nCOMMERCIAL INVOICE Invoice No.: CI-9001",
+   "ocr": true,
+   "tables": [
+    [
+     [
+      "ACME LTD",
+      "Road 1"
+     ],
+     [
+      "Invoice No.: CI-9001"
+     ],
+     [],
+     [
+      "Item No.",
+      "Description",
+      "Qty",
+      "Amount"
+     ],
+     [
+      "ZX-1",
+      "Bandage",
+      "1,200",
+      "96.00"
+     ],
+     [
+      "ZX-2",
+      "Plaster",
+      "800",
+      "40.00"
+     ],
+     [
+      "TOTAL",
+      "",
+      "2,000",
+      "136.00"
+     ]
+    ]
+   ]
+  }
+ ],
+ "expected": {
+  "invoice_number": "CI-9001",
+  "items": [
+   {
+    "ref": "ZX-1",
+    "qty": "1,200",
+    "net": "96"
+   },
+   {
+    "ref": "ZX-2",
+    "qty": "800",
+    "net": "40"
+   }
+  ]
+ }
+}

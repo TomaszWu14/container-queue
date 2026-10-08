@@ -1,0 +1,66 @@
+name: CI — zależności i obraz
+
+# Audyt CICD-002/CICD-003: zmiany infrastruktury i zależności nie mogą wejść bez testu.
+#  - pip-audit (backend/requirements.txt i requirements-dev.txt) + npm audit --audit-level=high (frontend, z dev-
+#    zależnościami: obecnie 0 zgłoszeń, a dev-serwer Vite też chodzi na maszynach ludzi),
+#  - docker build obrazu Coolify (bez push) — literówka w Dockerfile/zależnościach = czerwony PR.
+# Tylko gdy PR rusza te ścieżki (filtr paths — lustro w automerge.yml REQUIRED) + raz w
+# tygodniu (nowe CVE w niezmienionych zależnościach, dryf obrazów bazowych).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'backend/requirements*'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/ci-infra.yml'
+  schedule:
+    - cron: "37 4 * * 1"   # poniedziałek 04:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # draft w osobnej grupie — nie anuluje biegu „ready” (wyścig draft→ready, PR #796; security.yml)
+  group: ci-infra-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+
+jobs:
+  deps:
+    # draft: inna nazwa checku — pominięty bieg nie przesłoni wyniku w automerge (REQUIRED)
+    name: ${{ github.event.pull_request.draft && 'Skany — zależności (pip-audit, npm audit) (draft — pominięty)' || 'Skany — zależności (pip-audit, npm audit)' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # pomijaj drafty; cron/workflow_dispatch nie mają pull_request → wyrażenie = true
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - run: pip install pip-audit==2.10.1
+      - run: pip-audit -r backend/requirements-dev.txt --progress-spinner off   # pytest/ruff (CI)
+      - run: pip-audit -r backend/requirements.txt --progress-spinner off
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      # npm audit czyta package-lock.json — bez npm ci (sekundy)
+      - run: npm audit --audit-level=high
+        working-directory: frontend
+
+  image:
+    name: ${{ github.event.pull_request.draft && 'Build — obraz (draft — pominięty)' || 'Build — obraz' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: docker build Dockerfile.coolify (bez push)
+        run: docker build -f Dockerfile.coolify -t "timporye-ci:${GITHUB_RUN_ID}" .
+      - name: Sprzątanie obrazu
+        if: always()
+        run: docker image rm -f "timporye-ci:${GITHUB_RUN_ID}" || echo "brak obrazu do usunięcia"

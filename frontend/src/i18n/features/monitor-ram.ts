@@ -1,0 +1,47 @@
+// Monitor serwera — szczegóły RAM i procesy (pages/admin/MonitorMemory.tsx)
+import { defineFeature } from '../feature'
+
+export default defineFeature({
+  pl: {
+    monMemDetails: 'Na co idzie RAM',
+    monMemApps: 'procesy',
+    monMemShared: 'współdzielona',
+    monMemKernel: 'jądro',
+    monMemCache: 'cache (odzyskiwalny, poza %)',
+    monSwapNone: 'brak',
+    monProcName: 'Proces',
+    monProcContainer: 'Kontener',
+    monProcCount: 'Ile',
+    monProcPrivate: 'Prywatna',
+    monProcShared: 'Współdzielona',
+    monProcScopeHint: 'Brak danych hosta — widać tylko procesy aplikacji. Procesy całego serwera (Coolify, bazy, n8n) celowo nie są dostępne z aplikacji (bezpieczeństwo); sprawdzisz je narzędziem monitoringu serwera.',
+  },
+  en: {
+    monMemDetails: 'Where the RAM goes',
+    monMemApps: 'processes',
+    monMemShared: 'shared',
+    monMemKernel: 'kernel',
+    monMemCache: 'cache (reclaimable, not in %)',
+    monSwapNone: 'none',
+    monProcName: 'Process',
+    monProcContainer: 'Container',
+    monProcCount: 'Count',
+    monProcPrivate: 'Private',
+    monProcShared: 'Shared',
+    monProcScopeHint: 'No host data — only app processes are visible. Whole-server processes (Coolify, databases, n8n) are deliberately not exposed to the app (security); use a server monitoring tool.',
+  },
+  pt: {
+    monMemDetails: 'Para onde vai a RAM',
+    monMemApps: 'processos',
+    monMemShared: 'partilhada',
+    monMemKernel: 'kernel',
+    monMemCache: 'cache (recuperável, fora da %)',
+    monSwapNone: 'nenhum',
+    monProcName: 'Processo',
+    monProcContainer: 'Contentor',
+    monProcCount: 'Qtd.',
+    monProcPrivate: 'Privada',
+    monProcShared: 'Partilhada',
+    monProcScopeHint: 'Sem dados do anfitrião — só os processos da app são visíveis. Os processos de todo o servidor (Coolify, bases de dados, n8n) não são expostos à app de propósito (segurança); use uma ferramenta de monitorização do servidor.',
+  },
+})

@@ -1,0 +1,47 @@
+// Aktualności na Pulpicie — powiadomienia jak news (pages/news/*, spec 2026-10-01-aktualnosci-pulpit)
+import { defineFeature } from '../feature'
+
+export default defineFeature({
+  pl: {
+    newsClose: 'Zamknij', newsUnreadCount: 'nieprzeczytanych',
+    newsTitle: 'Aktualności',
+    newsCat_vessels: 'Statki', newsCat_customs: 'Odprawa', newsCat_orders: 'Zamówienia',
+    newsCat_deliveries: 'Dostawy', newsCat_messages: 'Wiadomości', newsCat_system: 'System',
+    newsUnreadOnly: 'Nieprzeczytane', newsSearch: 'Szukaj w aktualnościach…',
+    newsPinned: 'Pilne — przypięte', newsToday: 'Dziś', newsYesterday: 'Wczoraj',
+    newsLoadOlder: 'Załaduj starsze',
+    newsEarlier: 'wcześniejsze', newsUrgent: 'Pilne', newsMarkUnread: 'Oznacz jako nieprzeczytaną',
+    newsContainers: 'Kontenery', newsThread: 'Wcześniej w tym wątku',
+    newsActQueue: 'Pokaż w kolejce', newsActCustoms: 'Otwórz odprawę', newsActForwarding: 'Otwórz spedycję',
+    newsActOrders: 'Otwórz zamówienia', newsActCalendar: 'Otwórz kalendarz', newsActComplaints: 'Otwórz reklamacje',
+    newsActMasterData: 'Otwórz Master data', newsActSystem: 'Otwórz dziennik systemu', newsSeeAll: 'Zobacz wszystkie',
+  },
+  en: {
+    newsClose: 'Close', newsUnreadCount: 'unread',
+    newsTitle: 'News',
+    newsCat_vessels: 'Vessels', newsCat_customs: 'Customs', newsCat_orders: 'Orders',
+    newsCat_deliveries: 'Deliveries', newsCat_messages: 'Messages', newsCat_system: 'System',
+    newsUnreadOnly: 'Unread', newsSearch: 'Search news…',
+    newsPinned: 'Urgent — pinned', newsToday: 'Today', newsYesterday: 'Yesterday',
+    newsLoadOlder: 'Load older',
+    newsEarlier: 'earlier', newsUrgent: 'Urgent', newsMarkUnread: 'Mark as unread',
+    newsContainers: 'Containers', newsThread: 'Earlier in this thread',
+    newsActQueue: 'Show in queue', newsActCustoms: 'Open customs', newsActForwarding: 'Open forwarding',
+    newsActOrders: 'Open orders', newsActCalendar: 'Open calendar', newsActComplaints: 'Open complaints',
+    newsActMasterData: 'Open Master data', newsActSystem: 'Open system log', newsSeeAll: 'See all',
+  },
+  pt: {
+    newsClose: 'Fechar', newsUnreadCount: 'não lidas',
+    newsTitle: 'Notícias',
+    newsCat_vessels: 'Navios', newsCat_customs: 'Desalfandegamento', newsCat_orders: 'Encomendas',
+    newsCat_deliveries: 'Entregas', newsCat_messages: 'Mensagens', newsCat_system: 'Sistema',
+    newsUnreadOnly: 'Não lidas', newsSearch: 'Pesquisar notícias…',
+    newsPinned: 'Urgente — fixadas', newsToday: 'Hoje', newsYesterday: 'Ontem',
+    newsLoadOlder: 'Carregar anteriores',
+    newsEarlier: 'anteriores', newsUrgent: 'Urgente', newsMarkUnread: 'Marcar como não lida',
+    newsContainers: 'Contentores', newsThread: 'Antes neste tópico',
+    newsActQueue: 'Mostrar na fila', newsActCustoms: 'Abrir desalfandegamento', newsActForwarding: 'Abrir expedição',
+    newsActOrders: 'Abrir encomendas', newsActCalendar: 'Abrir calendário', newsActComplaints: 'Abrir reclamações',
+    newsActMasterData: 'Abrir Master data', newsActSystem: 'Abrir registo do sistema', newsSeeAll: 'Ver todas',
+  },
+})

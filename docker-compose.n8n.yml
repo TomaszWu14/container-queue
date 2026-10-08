@@ -1,0 +1,108 @@
+# n8n — NIEZALEŻNY stack (osobny zasób w Coolify, osobny cykl życia, własna baza).
+# Robi automatyzacje dla całej firmy; integracja z TIMPORYE jest opcjonalna.
+#
+# Kluczowa sztuczka: n8n NIE dostaje własnej domeny ani portu w firewallu. Publicznie
+# wystawiony jest tylko prefiks /n8n/... na domenie panelu — bo n8n sam serwuje swoje
+# webhooki pod tym prefiksem (zmienne N8N_ENDPOINT_*), więc brama nie przepisuje ścieżek.
+# Edytor otwierasz tunelem SSH (patrz docs/N8N.md) — z zewnątrz nie widać go wcale.
+#
+# W Coolify: + New Resource → Docker Compose, plik docker-compose.n8n.yml, BEZ domeny.
+# Sieć `timporye-apps` utwórz raz na serwerze:  docker network create timporye-apps
+
+services:
+  n8n-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_reservation: 256m   # INFRA-004: bazy nie limitujemy, tylko rezerwujemy (jak db panelu)
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8ndata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:   # rotacja docker logs — bez niej dysk serwera może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  n8n:
+    # wersja przypięta świadomie — „latest" potrafi zmienić zachowanie workflow przy
+    # przypadkowym redeployu; podnoś ręcznie po przejrzeniu release notes
+    image: ${N8N_IMAGE:-n8nio/n8n:2.40.2}
+    restart: unless-stopped
+    # INFRA-004: wspólny serwer 4 GB z panelem — n8n nie może zagłodzić baz (zmiana w Coolify:
+    # N8N_MEM_LIMIT / N8N_CPUS); przy braku RAM OOM killer ubija n8n, nie bazę
+    mem_limit: ${N8N_MEM_LIMIT:-1g}
+    cpus: ${N8N_CPUS:-1}
+    oom_score_adj: 500
+    environment:
+      # --- ścieżki publiczne: n8n serwuje je SAM pod prefiksem /n8n/ ---
+      # Dzięki temu brama nie robi rewrite'u, a adres w przeglądarce = adres widziany
+      # przez n8n (rewrite podścieżki psuje m.in. podpisy formularzy HITL — n8n#19635).
+      N8N_ENDPOINT_WEBHOOK: n8n/webhook
+      N8N_ENDPOINT_WEBHOOK_TEST: n8n/webhook-test
+      N8N_ENDPOINT_WEBHOOK_WAIT: n8n/webhook-waiting
+      N8N_ENDPOINT_FORM: n8n/form
+      N8N_ENDPOINT_FORM_TEST: n8n/form-test
+      N8N_ENDPOINT_FORM_WAIT: n8n/form-waiting
+      N8N_ENDPOINT_MCP: n8n/mcp
+      N8N_ENDPOINT_MCP_TEST: n8n/mcp-test
+      # publiczna baza adresów webhooków: n8n dokleja do niej segment z N8N_ENDPOINT_*,
+      # więc wychodzi https://domena/n8n/webhook/... (następca WEBHOOK_URL)
+      N8N_WEBHOOK_URL: ${N8N_PUBLIC_BASE_URL}
+      # --- edytor: tylko przez tunel SSH, dlatego adres lokalny ---
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL:-http://localhost:5678/}
+      # logowanie po http://localhost przez tunel — bez tego cookie z flagą Secure
+      # nie zostanie przyjęte i nie da się wejść do edytora
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      # ile proxy stoi przed n8n dla ruchu publicznego: Traefik Coolify + brama nginx (2);
+      # serwer bez domeny, brama wystawiona portem (http://IP:81) — tylko brama (1)
+      N8N_PROXY_HOPS: ${N8N_PROXY_HOPS:-2}
+      # klucz szyfrujący CREDENTIALE. Zmiana = utrata dostępu do zapisanych danych
+      # logowania w workflow. Przy migracji istniejącej instancji przepisz go 1:1.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      GENERIC_TIMEZONE: ${TZ:-Europe/Warsaw}
+      TZ: ${TZ:-Europe/Warsaw}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8nfiles:/home/node/.n8n
+    # Port publikowany WYŁĄCZNIE na loopback serwera — z internetu niedostępny (nic
+    # nie otwieramy w firewallu), a edytor otwierasz tunelem SSH z własnego laptopa:
+    #   ssh -L 5678:127.0.0.1:5678 user@serwer   →   http://localhost:5678
+    ports:
+      - "127.0.0.1:5678:5678"
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    networks:
+      - default   # własna baza
+      - apps      # brama panelu (i API TIMPORYE pod http://gateway/api/...)
+    logging:   # rotacja docker logs — bez niej dysk serwera może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  n8ndata:    # baza n8n: workflow, credentiale, historia wykonań — BEZ tego wszystko ginie
+  n8nfiles:   # /home/node/.n8n: dane binarne, ustawienia instancji
+
+networks:
+  apps:
+    external: true
+    name: timporye-apps

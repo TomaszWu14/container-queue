@@ -1,0 +1,59 @@
+# Kontekst builda Dockerfile.coolify (katalog główny repo). Obraz potrzebuje tylko:
+# backend/{requirements.txt,alembic.ini,migrations,scripts,app} i frontend/ (źródła panelu).
+# Mniejszy kontekst = szybsze wysłanie do BuildKit; wykluczone pliki nie unieważniają cache.
+
+# repozytorium i narzędzia
+.git
+.github
+.claude
+.planning
+.idea
+.vscode
+**/.DS_Store
+
+# sekrety i dane lokalne — nigdy do obrazu
+**/.env
+**/.env.*
+!**/.env.example
+**/*.db
+**/*.sqlite*
+**/uploads
+**/backups
+
+# artefakty Pythona
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.coverage
+**/htmlcov
+
+# backend: testy nie są potrzebne w obrazie
+backend/tests
+
+# frontend: zależności i build powstają w obrazie; e2e (Playwright) poza obrazem.
+# Testy w src/ ZOSTAJĄ — tsconfig obejmuje całe src, a `tsc -b` w buildzie je sprawdza.
+**/node_modules
+frontend/dist
+frontend/e2e
+frontend/playwright-report
+frontend/test-results
+frontend/*.tsbuildinfo
+**/.vite
+
+# dokumentacja i materiały pomocnicze
+docs
+diagrams
+graphify-out
+tests
+*.md
+# audyt (~20 MB raportów, zrzutów i danych surowych) — BUILD-007
+audit
+# konfiguracja i skrypty hosta (brama nginx, bootstrap serwera) — nie trafiają do obrazu;
+# wzorzec bez `**/` dotyczy tylko korzenia, więc backend/scripts ZOSTAJE
+deploy
+scripts
+tools

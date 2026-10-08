@@ -1,0 +1,77 @@
+{
+ "name": "01-standardowa-tabela",
+ "pages": [
+  {
+   "text": "COMMERCIAL INVOICE\nInvoice No.: FV/2026/101\nFOB QINGDAO",
+   "tables": [
+    [
+     [
+      "No",
+      "Item No.",
+      "Description",
+      "Qty",
+      "Unit",
+      "Unit price",
+      "Amount"
+     ],
+     [
+      "1",
+      "NL753-S-40",
+      "Catheter",
+      "1,000",
+      "PCS",
+      "0.25",
+      "250.00"
+     ],
+     [
+      "2",
+      "MSK2",
+      "Mask",
+      "20",
+      "CTN",
+      "10",
+      "200.00"
+     ],
+     [
+      "3",
+      "GLV-M",
+      "Nitrile gloves M",
+      "300",
+      "BOX",
+      "1.50",
+      "450.00"
+     ],
+     [
+      "",
+      "TOTAL",
+      "",
+      "1,320",
+      "",
+      "",
+      "900.00"
+     ]
+    ]
+   ]
+  }
+ ],
+ "expected": {
+  "invoice_number": "FV/2026/101",
+  "items": [
+   {
+    "ref": "NL753-S-40",
+    "qty": "1,000",
+    "net": "250"
+   },
+   {
+    "ref": "MSK2",
+    "qty": "20",
+    "net": "200"
+   },
+   {
+    "ref": "GLV-M",
+    "qty": "300",
+    "net": "450"
+   }
+  ]
+ }
+}

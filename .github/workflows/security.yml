@@ -1,0 +1,111 @@
+name: Security
+
+# Skany bezpieczeństwa (audyt CICD-003):
+#  - PR (każdy, bez filtra paths): gitleaks TYLKO na commitach PR-a + Bandit na backend/app.
+#    Job „Skany — sekrety i Bandit” jest w REQUIRED w automerge.yml → czerwony = brak merge'a.
+#  - co tydzień / ręcznie: gitleaks na CAŁEJ historii, Bandit, Trivy (informacyjnie: repo + obraz)
+#    i SBOM obrazu (CycloneDX) jako artefakt biegu (DEP-006).
+#  Podatności zależności (pip-audit, npm audit) + build obrazu: ci-infra.yml.
+# Fałszywe sekrety w fiksturach testowych: .gitleaksignore (fingerprinty z historii); nowy
+# fałszywy sekret w teście oznacz komentarzem `gitleaks:allow` w tej samej linii.
+# Wszystko na self-hosted (joby na ubuntu-latest nie startują — rozliczenia GitHub).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"   # poniedziałek 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Draft w osobnej grupie: bieg z eventu draftu (job pominięty) nie może anulować biegu
+  # „ready for review” tego samego PR-a — przy szybkim draft→ready kolejność runów bywa
+  # odwrócona i wymagany check zostawał tylko cancelled/skipped (PR #796).
+  group: security-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-sast:
+    # draft: inna nazwa checku — pominięty bieg nie przesłoni wyniku w automerge (REQUIRED)
+    name: ${{ github.event.pull_request.draft && 'Skany — sekrety i Bandit (draft — pominięty)' || 'Skany — sekrety i Bandit' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # pomijaj drafty; cron/workflow_dispatch nie mają pull_request → wyrażenie = true
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # gitleaks czyta commity (base..head PR-a albo całą historię)
+      - name: Instalacja gitleaks (przypięta wersja + sha256)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -sSfL -o gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks
+      - name: gitleaks
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          args=(git --redact --no-banner)
+          # PR: tylko jego commity (sekundy); cron/ręcznie: cała historia (~10 s).
+          if [ -n "$BASE" ]; then args+=(--log-opts="$BASE..$HEAD"); fi
+          "$RUNNER_TEMP/gitleaks" "${args[@]}" .
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - run: pip install "bandit[toml]==1.9.4"
+      - name: Bandit
+        run: bandit -q -r backend/app -c backend/pyproject.toml
+
+  trivy:
+    name: Trivy (podatności plików i zależności)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40   # + build obrazu do SBOM (jak „Build — obraz” w ci-infra, ≤25 min)
+    if: ${{ github.event_name != 'pull_request' }}
+    env:
+      TRIVY_VERSION: 0.74.0
+      TRIVY_SHA256: 2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Instalacja Trivy (przypięta wersja + sha256, bez sudo)
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -sSfL -o trivy.tgz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tgz" | sha256sum -c -
+          tar -xzf trivy.tgz trivy
+      - name: Skan Trivy (fs, HIGH/CRITICAL — raport, nie bramka)
+        run: >-
+          "$RUNNER_TEMP/trivy" fs --scanners vuln,secret,misconfig --severity HIGH,CRITICAL
+          --exit-code 0 --no-progress .
+      # DEP-006: SBOM i skan OBRAZU (pakiety Debiana: openssl, libpq, tesseract… + Python w obrazie),
+      # którego `trivy fs` nie widzi. Tylko tu (cron/ręcznie, self-hosted) — PR-ów nie spowalnia,
+      # a job nie jest w REQUIRED, więc np. problem z artefaktem nie blokuje merge'y.
+      - name: Build obrazu do SBOM (Dockerfile.coolify, bez push)
+        run: docker build -f Dockerfile.coolify -t "timporye-sbom:${GITHUB_RUN_ID}" .
+      - name: SBOM obrazu (CycloneDX)
+        run: >-
+          "$RUNNER_TEMP/trivy" image --format cyclonedx --output sbom-obraz.cdx.json
+          --no-progress "timporye-sbom:${GITHUB_RUN_ID}"
+      - name: Artefakt SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-obraz-${{ github.sha }}
+          path: sbom-obraz.cdx.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Skan Trivy obrazu (HIGH/CRITICAL z dostępną poprawką — raport, nie bramka)
+        run: >-
+          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed
+          --exit-code 0 --no-progress "timporye-sbom:${GITHUB_RUN_ID}"
+      - name: Sprzątanie obrazu
+        if: always()
+        run: docker image rm -f "timporye-sbom:${GITHUB_RUN_ID}" || echo "brak obrazu do usunięcia"

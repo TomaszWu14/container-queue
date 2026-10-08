@@ -1,0 +1,12 @@
+/* Wzory plików dla agencji (Master data, pages/masterdata/AgencyTemplatesTab.tsx) */
+.atpl-table td { vertical-align: middle; padding-top: 3px; padding-bottom: 3px; }
+.atpl-table input:not([type="checkbox"]), .atpl-table select { height: var(--control-h-sm); font-size: 13px; }
+.atpl-table input:not([type="checkbox"]) { width: 100%; min-width: 120px; }
+.atpl-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+.atpl-actions .btn { min-width: 28px; padding: 0 6px; }
+.atpl-table td.muted { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* wymagana kolumna bez źródła danych — do uzupełnienia przed generowaniem pliku */
+.atpl-table tr.atpl-gap td { background: var(--warning-bg); }
+.atpl-table tr.atpl-gap td:first-child { box-shadow: inset 3px 0 0 var(--warning-ink); }
+.atpl-src { display: flex; gap: 6px; align-items: center; }
+.atpl-table .atpl-src input.atpl-const { width: 72px; min-width: 72px; }

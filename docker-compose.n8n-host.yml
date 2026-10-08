@@ -1,0 +1,90 @@
+# n8n — wariant „własny host" (sieć wewnętrzna / prosty setup).
+#
+# W przeciwieństwie do docker-compose.n8n.yml (brama nginx + prefiks /n8n/ + tunel SSH),
+# tutaj n8n dostaje WŁASNĄ domenę i Traefik Coolify terminuje na niej HTTPS — jak panel.
+# Prościej, gdy IT może dać drugą wewnętrzną nazwę DNS (np. n8n.acme.local) wskazującą
+# na ten sam serwer. Edytor i webhooki są pod tą jedną domeną; bez bramy i bez tunelu.
+#
+# W Coolify: + New Resource → Docker Compose, plik docker-compose.n8n-host.yml.
+#   Domena na usłudze `n8n` → https://n8n.twojafirma.pl, port kontenera 5678.
+# Integracja z panelem TIMPORYE (opcjonalna): n8n woła API panelu po jego domenie
+#   (https://kolejka.../api/...) z tokenem AUTOMATION_API_TOKEN — bez współdzielonej sieci.
+#
+# Zmienne (Environment Variables w Coolify):
+#   N8N_DB_PASSWORD      — silne hasło do bazy n8n
+#   N8N_ENCRYPTION_KEY   — klucz szyfrujący credentiale (przy migracji przepisz 1:1)
+#   N8N_PUBLIC_BASE_URL  — https://n8n.twojafirma.pl/  (z ukośnikiem na końcu)
+
+services:
+  n8n-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_reservation: 256m   # INFRA-004: bazy nie limitujemy, tylko rezerwujemy (jak db panelu)
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD}
+    volumes:
+      - n8ndata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:   # rotacja docker logs — bez niej dysk serwera może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  n8n:
+    # wersja przypięta świadomie — „latest" potrafi zmienić zachowanie workflow przy
+    # przypadkowym redeployu; podnoś ręcznie po przejrzeniu release notes
+    image: ${N8N_IMAGE:-n8nio/n8n:2.40.2}
+    restart: unless-stopped
+    # INFRA-004: wspólny serwer 4 GB z panelem — n8n nie może zagłodzić baz (zmiana w Coolify:
+    # N8N_MEM_LIMIT / N8N_CPUS); przy braku RAM OOM killer ubija n8n, nie bazę
+    mem_limit: ${N8N_MEM_LIMIT:-1g}
+    cpus: ${N8N_CPUS:-1}
+    oom_score_adj: 500
+    environment:
+      # własna domena: edytor i webhooki na jednym hoście (Traefik Coolify robi HTTPS)
+      N8N_HOST: ${N8N_HOST}                       # np. n8n.acme.local
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      N8N_EDITOR_BASE_URL: ${N8N_PUBLIC_BASE_URL}
+      N8N_WEBHOOK_URL: ${N8N_PUBLIC_BASE_URL}     # webhooki: https://host/webhook/...
+      # HTTPS z prawdziwej domeny → cookie z flagą Secure działa (inaczej brak logowania)
+      N8N_SECURE_COOKIE: "true"
+      # jedno proxy przed n8n (Traefik Coolify) — poprawne IP klienta w logach/limitach
+      N8N_PROXY_HOPS: 1
+      # klucz szyfrujący CREDENTIALE. Zmiana = utrata dostępu do zapisanych danych
+      # logowania w workflow. Przy migracji istniejącej instancji przepisz go 1:1.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD}
+      GENERIC_TIMEZONE: ${TZ:-Europe/Warsaw}
+      TZ: ${TZ:-Europe/Warsaw}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8nfiles:/home/node/.n8n
+    # port kontenera dla proxy Coolify (domenę ustawiasz w Coolify na usłudze n8n);
+    # NIE publikujemy portu na host — ruch idzie wyłącznie przez Traefik po HTTPS
+    expose:
+      - "5678"
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+    logging:   # rotacja docker logs — bez niej dysk serwera może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  n8ndata:    # baza n8n: workflow, credentiale, historia wykonań — BEZ tego wszystko ginie
+  n8nfiles:   # /home/node/.n8n: dane binarne, ustawienia instancji

@@ -1,0 +1,62 @@
+{
+ "name": "05-dwie-strony",
+ "pages": [
+  {
+   "text": "COMMERCIAL INVOICE\nInvoice No.: FV/2026/202",
+   "tables": [
+    [
+     [
+      "Item No.",
+      "Description",
+      "Qty",
+      "Unit price",
+      "Amount"
+     ],
+     [
+      "P-1",
+      "Pad",
+      "10",
+      "2.00",
+      "20.00"
+     ]
+    ]
+   ]
+  },
+  {
+   "text": "page 2",
+   "tables": [
+    [
+     [
+      "Item No.",
+      "Description",
+      "Qty",
+      "Unit price",
+      "Amount"
+     ],
+     [
+      "P-2",
+      "Pad XL",
+      "5",
+      "3.00",
+      "15.00"
+     ]
+    ]
+   ]
+  }
+ ],
+ "expected": {
+  "invoice_number": "FV/2026/202",
+  "items": [
+   {
+    "ref": "P-1",
+    "qty": "10",
+    "net": "20"
+   },
+   {
+    "ref": "P-2",
+    "qty": "5",
+    "net": "15"
+   }
+  ]
+ }
+}

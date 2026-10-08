@@ -1,0 +1,433 @@
+/* feedback, oś czasu, legenda mapy, power tools, utility spedycji, szlif A+E — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* --- warstwa feedbacku: toasty, skeleton, błąd+retry --- */
+.toast-stack {
+  position: fixed; right: 16px; bottom: 16px; z-index: 200;
+  display: flex; flex-direction: column; gap: 8px; max-width: 360px;
+}
+.toast {
+  padding: 10px 14px; border-radius: 3px; color: #fff; font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18); cursor: pointer; animation: toast-in 0.15s ease-out;
+}
+.toast-success { background: #0e8a6a; }
+.toast-error { background: var(--danger-fill); color: var(--text-on-fill); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.skeleton { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.skeleton-row {
+  height: 16px; border-radius: 6px; background: linear-gradient(90deg, var(--soft) 25%, var(--border) 37%, var(--soft) 63%);
+  background-size: 400% 100%; animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row { animation: none; }
+  .toast { animation: none; }
+}
+
+.load-error {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: var(--r-sm); background: var(--panel); color: var(--text);
+}
+.load-error-icon { color: var(--danger); font-size: 18px; flex: none; }
+.load-error > span { flex: 1; }
+.map-layer-error { margin-bottom: var(--sp-2); }
+
+/* Tap-targety ≥44px na ekranach dotykowych (WCAG 2.5.5 / audyt UX pkt 8).
+   Root-cause w jednym miejscu zamiast łatania każdego komponentu — obejmuje
+   .btn small (steppery/chipy QueueSummaryBar), emoji-akcje UsersTab, .avizo-grid input. */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn.small { min-height: 44px; min-width: 44px; padding: 8px 12px; }
+  select,
+  textarea,
+  input[type="text"], input[type="number"], input[type="date"],
+  input[type="email"], input[type="password"], input[type="search"], input[type="tel"] {
+    min-height: 44px;
+  }
+  /* UX-011 (pomiar 390 px po #654): pigułki spółek, zakładki widoków, segmenty, filtry-chipy,
+     grupy menu, link „Otwórz kolejkę”, pola bez atrybutu type, „?” pomocy i pola wyboru */
+  button, [role="button"], summary { min-height: var(--tap); }
+  a.link-like { display: inline-flex; align-items: center; min-height: var(--tap); }
+  input:not([type]), input[type="url"] { min-height: var(--tap); }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+  .help-tip-btn { position: relative; min-height: 0; }   /* pole trafienia daje ::after, bez zmiany układu */
+  .help-tip-btn::after { content: ''; position: absolute; inset: -14px; }
+}
+
+/* oś czasu kontenera (styl kurierski) */
+.ctimeline { list-style: none; margin: 12px 0 0; padding: 0 0 0 4px; }
+.ctimeline li { position: relative; display: grid; grid-template-columns: 150px 1fr;
+  gap: 2px 14px; padding: 0 0 16px 22px; }
+.ctimeline li::before { content: ''; position: absolute; left: 6px; top: 14px; bottom: -2px;
+  width: 2px; background: var(--border); }
+.ctimeline li:last-child::before { display: none; }
+.ctimeline .ct-dot { position: absolute; left: 0; top: 4px; width: 14px; height: 14px;
+  border-radius: 50%; border: 2px solid var(--border); background: var(--panel); }
+.ctimeline li.k-order .ct-dot { border-color: #6366f1; }
+.ctimeline li.k-carrier .ct-dot { border-color: #0ea5e9; }
+.ctimeline li.k-vessel .ct-dot { border-color: #14b8a6; }
+.ctimeline li.k-system .ct-dot { border-color: var(--muted); }
+.ctimeline li.k-planned .ct-dot { border-color: var(--accent-ink); }
+.ctimeline li.done .ct-dot { border-color: var(--good); background: var(--good); }
+.ctimeline li.done .ct-dot::after { content: '✓'; position: absolute; inset: 0;
+  color: #fff; font-size: 9px; line-height: 10px; text-align: center; font-weight: 700; }
+.ctimeline li.est .ct-dot { border-style: dashed; border-color: var(--accent-ink); }
+.ctimeline .ct-when { font-size: 12px; color: var(--muted); padding-top: 2px; }
+.ctimeline .ct-label { font-weight: 600; font-size: 14px; }
+.ctimeline .ct-sub { grid-column: 2; font-size: 13px; }
+
+/* split-view mapa<->lista: aktywny wiersz tabeli statków */
+table.grid tr.row-active td { background: var(--accent-soft); }
+table.grid tr.row-active td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* paleta Ctrl+K */
+.gs-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(16, 22, 31, 0.45);
+  display: flex; justify-content: center; align-items: flex-start; padding-top: 14vh; }
+.gs-panel { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--border);
+  border-radius: 3px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25); overflow: hidden; }
+.gs-input { width: 100%; border: 0; border-bottom: 1px solid var(--border); border-radius: 0;
+  padding: 14px 16px; font-size: 16px; outline: none; }
+.gs-results { list-style: none; margin: 0; padding: 4px 0; max-height: 46vh; overflow-y: auto; }
+.gs-results li { display: flex; align-items: center; gap: 8px; padding: 9px 16px; cursor: pointer;
+  font-size: 14px; }
+.gs-results li.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.gs-results li .badge { margin-left: auto; }
+.gs-empty { padding: 16px; font-size: 14px; }
+.gs-hint { padding: 6px 16px 10px; font-size: 12px; font-family: var(--font-mono); }
+/* chip kongestii portowej (nasza flota na redzie) */
+.congestion-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  font-size: 13px; color: var(--text); }
+
+/* chipy kluczowych portów nad mapą (makieta Tracking.html: .chip) */
+.port-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+  font-size: 13px; color: var(--text); cursor: pointer;
+  transition: border-color .12s ease, box-shadow .12s ease; }
+.port-chip:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(16, 38, 63, 0.1); }
+.port-chip .nm { font-weight: 600; font-size: 12px; letter-spacing: 0.04em; }
+.port-chip .mono { color: var(--accent-ink); }
+.port-chip .u { color: var(--muted); font-size: 12px; }
+
+/* legenda mapy (makieta #legend) — szkło w prawym dolnym rogu */
+.map-legend-glass { right: 12px; bottom: 12px; padding: 12px 14px; font-size: 12px;
+  min-width: 212px; max-width: 250px; }
+.map-legend-glass b { display: inline; font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #7fa5d0; font-weight: 600; }
+/* legenda zwijana (C30): nagłówek = przełącznik */
+.map-legend-glass summary { cursor: pointer; list-style-position: inside; }
+.map-legend-glass[open] summary { margin-bottom: 8px; }
+.map-legend-glass .row { display: flex; align-items: center; gap: 9px; margin-top: 7px; flex-wrap: nowrap;  /* B11: globalne .row zawijało podpis pod kolor */
+  color: #cfe0f5; }
+.map-legend-glass .sw { width: 22px; height: 0; border-top: 2px dashed #f5a623; flex: none; }
+.map-legend-glass .dot { width: 10px; height: 10px; border-radius: 999px;
+  border: 2px solid #fff; flex: none; }
+.map-legend-glass .dot.dest { background: #ffd166; border-color: #fff8e6; }
+.map-legend-glass .dot.term { width: 7px; height: 7px; background: #8fd3e8;
+  border: 1px solid rgba(8, 20, 36, 0.9); }
+.map-legend-glass .sq { width: 12px; height: 12px; border-radius: 3px; flex: none;
+  background: rgba(110, 168, 245, 0.34); border: 1px solid #6ea8f5; }
+.map-legend-glass .fab { width: 10px; height: 10px; border-radius: 2px; flex: none;
+  background: #7ac74f; border: 1px solid #0a1626; transform: rotate(45deg); }
+.map-legend-glass .wh { width: 11px; height: 11px; border-radius: 2px;
+  border: 1.5px solid #fff; flex: none; }
+.map-legend-glass .wh-head { margin-top: 11px; color: #8fa8c4; font-size: 10px;
+  font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; }
+/* na wąskich ekranach legenda zasłaniałaby pół mapy */
+@media (max-width: 900px) { .map-legend-glass { display: none; } }
+
+/* gwiazdka „moje kontenery" na kafelku kolejki */
+.watch-star { border: 0; background: none; padding: 6px; font-size: 17px;
+  color: var(--faint); cursor: pointer; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; min-height: 32px; border-radius: 3px; }
+.watch-star:hover { background: var(--soft); }
+.watch-star.on { color: var(--accent-ink); }
+.watch-star:hover { color: var(--accent-ink); }
+
+/* power tools kolejki: kopiowanie, sort, widoki, drawer podglądu */
+.copy-btn { border: 0; background: none; padding: 6px; cursor: pointer; font-size: 14px;
+  color: var(--faint); border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; min-height: 32px; }
+.copy-btn:hover { color: var(--accent-ink); background: var(--soft); }
+.hdr-sortwrap { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.sort-btn { border: 0; background: none; padding: 4px; cursor: pointer; font-size: 13px;
+  color: var(--faint); line-height: 1; border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; min-height: 32px; }
+.sort-btn:hover { background: var(--soft); color: var(--accent-ink); }
+.sort-btn.on { color: var(--accent-ink); font-weight: 700; }
+.sort-btn sup { font-size: 9px; }
+.cols-views { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.view-chip { display: inline-flex; align-items: center; border: 1px solid var(--border);
+  border-radius: 3px; overflow: hidden; }
+.view-chip button { border: 0; background: var(--panel); padding: 3px 8px; cursor: pointer;
+  font-size: 13px; }
+.view-chip button:hover { background: var(--accent-soft); }
+.view-chip .view-del { border-left: 1px solid var(--border); color: var(--muted); padding: 3px 6px; }
+.drawer-backdrop { position: fixed; inset: 0; z-index: 150; background: rgba(16, 22, 31, 0.3); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 151; width: min(380px, 92vw);
+  background: var(--panel); border-left: 1px solid var(--border);
+  box-shadow: -12px 0 30px rgba(16, 38, 63, 0.18); display: flex; flex-direction: column; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 17px; }
+.drawer-body { padding: 8px 16px; overflow-y: auto; flex: 1; }
+.drawer .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0;
+  border-bottom: 1px dashed var(--border); font-size: 14px; }
+
+/* W1: wiek statusu + masowa zmiana + akcja toastu */
+.age-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 5px; vertical-align: 1px; }
+.age-dot.age-amber { background: #d99e00; }
+.age-dot.age-red { background: var(--danger); }
+
+.toast .toast-action { margin-left: 10px; border: 1px solid rgba(255,255,255,0.5); background: none; color: inherit; border-radius: 3px; padding: 2px 8px; cursor: pointer; font-weight: 700; }
+
+/* #33 pasek sugestii statusu z geofence */
+.suggest-bar { display: flex; align-items: center; margin: 8px 0; padding: 8px 12px;
+  background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 3px; font-size: 14px; }
+
+/* #62 — przełącznik motywu w topnav */
+.tn-theme-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06);
+  color: #fff; border-radius: 3px; width: 32px; height: 32px; font-size: 16px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.tn-theme-toggle:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* #65 — onboarding: overlay + dymek kotwiczony do [data-tour] (fallback: środek ekranu) */
+.ob-overlay { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+/* dymek bez celu: środek przez flex, nie translate(-50%) — ułamkowe piksele rozmywały tekst */
+.ob-overlay.ob-center { display: flex; align-items: center; justify-content: center; }
+.ob-overlay.ob-center .ob-bubble { position: static; }
+.ob-bubble {
+  position: fixed; width: 280px; pointer-events: auto;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px 16px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  z-index: 901;
+}
+.ob-bubble p { margin: 0 0 12px; font-size: 14px; line-height: 1.4; }
+.ob-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ob-dots { display: flex; gap: 5px; margin-top: 10px; justify-content: center; }
+.ob-dots i { width: 6px; height: 6px; border-radius: 999px; background: var(--border); }
+.ob-dots i.on { background: var(--accent); }
+
+/* #43 — przełącznik "powiadomienia tylko o obserwowanych" w topnavie */
+.tn-watch-only {
+  display: flex; align-items: center; gap: 7px; color: #cdd9ec;
+  font-size: 13px; font-weight: 500; padding: 4px 6px; border-radius: 3px;
+  white-space: nowrap; cursor: pointer;
+}
+.tn-watch-only:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+/* wysokość navbara dyktuje .sb-avatar (38px) — kontrolka kończy się na ~26px,
+   więc powiększenie NIE podnosi paska (limit +4px zachowany) */
+.tn-watch-only input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+/* #46 — karta rozładunku: druk (numer kontenera duży + QR), reszta strony ukryta */
+.unload-card-sheet { max-width: 640px; margin: 0 auto; }
+.unload-card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-bottom: 16px;
+}
+.unload-card-head h1 { font-size: 38px; margin: 0; }
+@media print {
+  .app-shell > *:not(.app-main) { display: none !important; }
+  .no-print { display: none !important; }
+  .unload-card { padding: 0; }
+}
+
+/* #A4 — jeden widoczny pierścień fokusa dla klawiatury na wszystkim, co klikalne.
+   Nie kasujemy outline nigdzie — reguła tylko go ujednolica. */
+button:focus-visible, a:focus-visible, select:focus-visible,
+input:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px;
+}
+/* etykieta opakowująca checkbox jest klikalna — kursor ma to pokazywać */
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { cursor: pointer; }
+
+/* ===== Refactor spedycji (quotes/forwarding) — nowe klasy utility, dopisane na końcu ===== */
+.m0 { margin: 0; }
+/* tytuł strony publicznej (kierowca, DLT): rozmiar h1 z tokena, ciasny odstęp pod logo */
+h1.title-token { margin: 4px 0; }
+.mt0 { margin-top: 0; }
+.p0 { padding: 0; }
+.grow { flex: 1; }
+.row-between { justify-content: space-between; }
+.row-center { align-items: center; }
+.gap-8 { gap: 8px; }
+/* #A4 — .txt-xs było WIĘKSZE od .txt-sm (0.82 > 0.8); skala uporządkowana
+   i podniesiona do progu 12px. Dotyka 9 użyć w 3 plikach (QuotesPage,
+   quotes/forms.tsx, quotes/JobDetail.tsx). */
+.txt-sm { font-size: 14px; }
+.txt-xs { font-size: 12px; }
+.lbl-sm { font-size: 14px; font-weight: 500; }
+.table-scroll { overflow-x: auto; }
+.check-row { flex-direction: row; align-items: center; gap: 8px; }
+.h3-tight { margin: 6px 0; }
+.h3-block { margin: 12px 0; }
+.quote-subpanel { margin-top: 12px; }
+.quote-subpanel-gap { margin-top: 14px; }
+.quote-score { font-size: 12px; margin-top: 2px; }
+.history-panel { margin-top: 10px; }
+.history-empty { margin: 6px 0; }
+.history-list { margin: 6px 0; padding-left: 18px; }
+.cancel-row { margin-top: 12px; gap: 12px; align-items: center; }
+.modal-actions { margin-top: 10px; }
+.watch-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.watchers-head { display: flex; justify-content: space-between; align-items: center; }
+.watchers-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.watchers-list li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.user-avatar {
+  border-radius: 50%; object-fit: cover; flex: none; display: inline-grid; place-items: center;
+  color: #fff; font-weight: 600;
+}
+.user-avatar.initials { background: var(--avatar-bg); }
+.watcher-reason { font-size: 12px; color: var(--muted); }
+/* powód obserwacji przy ★ (kolejka: zajmuje resztę kolumny Nr i obcina się; szuflada) */
+.watch-reason-tag { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 11px; line-height: 16px; padding: 0 5px; border-radius: var(--r-sm);
+  color: var(--warning-ink); background: var(--warning-bg); }
+.kq-no:has(> .watch-reason-tag) { max-width: 100%; }   /* etykieta się kurczy, kolumna nie rośnie */
+.watch-mark { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--warning-ink); }
+/* gwiazdka nad statkiem na mapie: statek wiezie mój obserwowany kontener */
+.vessel-watch-star { fill: var(--warning-ink); stroke: var(--text-on-fill); }
+.vessel-watched-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.report-table { margin-top: 10px; }
+.price-change { margin-top: 14px; border-top: 1px solid var(--line, #ddd); padding-top: 10px; }
+.notes-cell { max-width: 260px; white-space: pre-wrap; }
+.tabs-sep { align-self: stretch; width: 1px; background: var(--border); margin: 4px 6px; }
+/* Wykres trendu kosztów */
+.cost-trend { margin-top: 12px; }
+.cost-trend-title { font-size: 12px; margin-bottom: 6px; }
+.cost-trend-rows { display: flex; flex-direction: column; gap: 6px; }
+.cost-trend-row { display: grid; grid-template-columns: 108px 1fr auto; gap: 10px; align-items: center; }
+.cost-trend-label { font-size: 12px; color: var(--muted); }
+.cost-trend-track { background: var(--border); border-radius: 6px; height: 16px; overflow: hidden; }
+.cost-trend-bar { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+.cost-trend-value { font-size: 13px; }
+/* Pusty stan: panel z ikoną i wskazówką zamiast gołego tekstu */
+.empty-state { padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--text-muted); }
+.empty-state p { margin: var(--sp-1) 0; }
+.empty-state-icon { font-size: 29px; margin-bottom: var(--sp-1); color: var(--text-muted); }
+.empty-state-title { color: var(--text); font-size: var(--fs-md); font-weight: var(--fw-md); }
+.empty-state-hint { font-size: var(--fs-sm); max-width: 52ch; margin-inline: auto !important; }
+.empty-state-actions { display: flex; gap: var(--sp-2); justify-content: center; flex-wrap: wrap; margin-top: var(--sp-3); }
+
+/* Mini-track cyklu życia (makieta „Kolejka — hybryda A+E"): 8 segmentów w kolumnie
+   „Etap". Zaliczone zielone, bieżący teal z kropką (czerwony gdy opóźniony). */
+.stage-track { display: flex; align-items: center; gap: 2px; width: 100%; min-width: 90px; }
+.stage-track i {
+  flex: 1; height: 5px; background: #ded6c8; border-radius: 2px; display: block; position: relative;
+}
+.stage-track i.done { background: #2f7d54; }
+.stage-track i.cur { background: var(--accent); }
+.stage-track i.cur::after {
+  content: ''; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent); border: 2.5px solid var(--panel);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.stage-track i.cur.late { background: var(--danger); }
+.stage-track i.cur.late::after { background: var(--danger); box-shadow: 0 0 0 1.5px var(--danger); }
+:root[data-theme='dark'] .stage-track i { background: #2c3b4d; }
+
+/* ── Szlif „Kolejka — hybryda A+E" (makieta Kolejka_-_hybryda_AE_offline) ─────
+   Wielkości przycisków, toolbara, bandu dnia i nagłówków kolumn dopasowane do
+   makiety. Scoped do klas kolejki (.queue-toolbar / .day-banner / .tile-cols /
+   .queue-footer), żeby nie rozjechać innych stron używających globalnych .btn/.seg.
+   Na dotyku nadal wygrywa @media (pointer: coarse) min-height 44px (niżej w kaskadzie
+   media query, ale min-height nie jest tu nadpisywany). */
+
+/* przyciski toolbara — makieta .tl button.b: 12px / 6px 12px */
+.queue-toolbar .btn { font-size: 12px; padding: 6px 12px; }
+.queue-toolbar .btn.small { font-size: 12px; padding: 5px 10px; }
+.queue-toolbar .lock-btn { font-size: 12px; padding: 5px 11px; }
+/* segmenty zakresu dat — makieta .tl .seg button: 12px / 5px 11px */
+.queue-toolbar .seg button { font-size: 12px; padding: 5px 11px; }
+/* wyszukiwarka — makieta .tl .q: 12px, niższy pad pionowy (pad lewy 34px = ikona) */
+.queue-toolbar .qsearch { font-size: 12px; padding-top: 5px; padding-bottom: 5px; }
+.queue-toolbar .range-stepper .step { width: 26px; height: 26px; font-size: 17px; }
+.queue-toolbar .range-label { font-size: 13px; padding: 4px 10px; min-width: 170px; }
+
+/* monitor serwera (Administracja → System) */
+.mon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.mon-meter { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; }
+.mon-head { display: flex; justify-content: space-between; font-size: 14px; }
+.mon-bar { height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.mon-bar i { display: block; height: 100%; border-radius: 4px; }
+
+/* dziennik serwera — podzakładki (Administracja → System → Monitor) */
+.log-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.log-filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; margin-bottom: 10px; }
+.log-filters label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
+.log-toolbar { margin-bottom: 10px; }
+.log-pager { display: flex; gap: 8px; margin-top: 8px; }
+.log-tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.log-tile { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; min-width: 0; }
+.log-tile-name { display: block; overflow-wrap: anywhere; }
+.log-tile-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; min-width: 0; }
+.log-tile-ok b { color: var(--good); }
+.log-tile-err { border-color: var(--danger); }
+.log-tile-err b { color: var(--danger); }
+td.log-5xx, tr.log-5xx td { color: var(--danger); }
+td.log-4xx { color: #b7791f; }
+td.log-slow { color: var(--muted); }
+.log-traffic-axis { display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px; }
+table.grid pre, .log-tile pre { white-space: pre-wrap; overflow-x: auto; max-height: 320px; }
+
+/* okno potwierdzenia (ConfirmDialog) — zamiast window.confirm/prompt */
+.confirm-message { margin: 0; line-height: var(--lh-base); white-space: pre-line; }
+.confirm-field { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-sm); color: var(--text-muted); }
+.btn.danger-solid { background: var(--danger-fill); border-color: var(--danger-fill); color: var(--text-on-fill); }
+.btn.danger-solid:hover { filter: brightness(0.92); }
+/* telefon: krótkie pytanie = karta na środku, nie pełny ekran jak formularze */
+@media (max-width: 639px) {
+  .modal.confirm-dialog { min-height: 0; margin: auto var(--sp-4); border-radius: var(--r-sm); }
+}
+
+/* Field: etykieta nad polem + podpowiedź/błąd (audyt UI S1) */
+.field { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); color: var(--text-muted); }
+.field-hint { font-size: var(--fs-xs); color: var(--text-muted); }
+.field-error { font-size: var(--fs-xs); color: var(--danger); }
+.field [aria-invalid="true"] { border-color: var(--danger); }
+/* wiersz formularza z etykietami nad polami (A29/C33): pola rosną, przyciski na linii pól */
+.field-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); align-items: end;
+  gap: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-2); }
+.field-row > .field { min-width: 0; }
+.field-row > :not(.field) { justify-self: start; }
+@media (min-width: 640px) { .field-row > .field.wide { grid-column: span 2; } }
+.field-row > .field > input, .field-row > .field > select { width: 100%; min-width: 0; box-sizing: border-box; }
+.field-row-ok { color: var(--success-ink); font-weight: 600; }
+.care-form { margin: var(--sp-3) 0; }
+.care-form textarea { resize: vertical; min-height: var(--control-h); }
+.care-form > .check-row { display: flex; flex-direction: row; align-items: center; gap: var(--sp-2);
+  align-self: center; font-size: var(--fs-sm); }
+
+/* ikony Lucide w tekście i przyciskach (zamiast emoji, audyt UI PR 6): na linii bazowej tekstu */
+svg.lucide { flex-shrink: 0; vertical-align: -0.15em; }
+
+/* tekst tylko dla czytników ekranu (nazwy kolumn ikonowych itp.) */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* tytuł strony jako h1 (dostępność: page-has-heading-one) z wyglądem dawnego h2 */
+h1.as-h2 { font-size: 1.5em; margin-block: 0.83em; }
+h2.as-h3 { font-size: 1.17em; margin-block: 1em; }
+/* profil — sesje (UX-031/UX-036): 3 kolumny mieszczą się w karcie telefonu, znacznik bieżącej sesji = success */
+.sessions-head { align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.sessions-head h2 { margin: 0; }
+.sessions-table { max-width: 720px; margin-top: var(--sp-2); }
+.sessions-table td:last-child, .sessions-table th:last-child { width: 1%; white-space: nowrap; }
+.badge.sess-current { background: var(--success-bg); color: var(--success-ink); font-family: var(--font-sans); letter-spacing: 0; }
+/* akcje wiersza tabeli (UX-003): jeden rząd, stałe sloty; ikony w kolorze tekstu przycisku */
+.row-actions { display: inline-flex; align-items: center; gap: var(--sp-1); flex-wrap: nowrap; }
+.row-actions > .btn { flex: none; white-space: nowrap; }
+
+/* źródło importu w SAP (SapSource.tsx): plakietka tabeli SE16N + ⓘ */
+.sap-src { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.sap-tag { font: 600 10px/16px var(--font-mono, monospace); letter-spacing: .04em; padding: 0 6px;
+  border-radius: 3px; background: var(--soft); color: var(--muted-strong); border: 1px solid var(--border); }
+.sap-src .help-tip-btn { font-style: italic; font-family: Georgia, serif; }
+.sap-src .help-pop { white-space: pre-line; }

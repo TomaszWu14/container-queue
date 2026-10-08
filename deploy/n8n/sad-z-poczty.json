@@ -1,0 +1,72 @@
+{
+  "name": "TIMPORYE — draft SAD z poczty (Outlook → TIMPORYE)",
+  "nodes": [
+    {
+      "id": "s1",
+      "name": "Plik SAD ze skryptu Outlooka",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "sad-inbox",
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "SAD webhook (X-SAD-Secret)" }
+      },
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sad-inbox",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": { "binaryPropertyName": "file" }
+      }
+    },
+    {
+      "id": "s2",
+      "name": "Do TIMPORYE (skrzynka draftów SAD)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "credentials": {
+        "httpHeaderAuth": { "id": "", "name": "TIMPORYE token" }
+      },
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.0.2.10:81/api/sad-drafts/inbox",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            { "parameterType": "formBinaryData", "name": "file", "inputDataFieldName": "file" }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": { "response": { "fullResponse": true, "neverError": true } }
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "name": "Odpowiedz skryptowi (kod i treść z TIMPORYE)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.body) }}",
+        "options": { "responseCode": "={{ $json.statusCode }}" }
+      }
+    }
+  ],
+  "connections": {
+    "Plik SAD ze skryptu Outlooka": {
+      "main": [[{ "node": "Do TIMPORYE (skrzynka draftów SAD)", "type": "main", "index": 0 }]]
+    },
+    "Do TIMPORYE (skrzynka draftów SAD)": {
+      "main": [[{ "node": "Odpowiedz skryptowi (kod i treść z TIMPORYE)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

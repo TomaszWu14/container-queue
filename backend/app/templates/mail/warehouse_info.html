@@ -1,0 +1,9 @@
+
+<div style='font-family:Calibri,Arial,sans-serif;font-size:14px'>
+<p>Dzień dobry, / Hello,</p>
+<p>informacja o nadchodzącej paczce kontenerów do Państwa magazynu:<br>
+<span style='color:#64748b'>notice of an incoming batch of containers to your warehouse:</span></p>
+{% include "mail/container_table.html" %}
+{% if note %}<p><b>Uwagi / Notes:</b> {{ note|nl2br }}</p>{% endif %}
+<p>Pozdrawiamy / Best regards,<br>{{ operator }}</p>
+</div>

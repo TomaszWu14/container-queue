@@ -1,0 +1,5 @@
+graphify-out/graph.json merge=graphify
+# Słowniki i18n: każdy PR dopisuje klucze (zwykle na końcu obiektu) → dwa równoległe PR-y
+# zawsze konfliktowały. `union` zostawia linie obu stron; zdublowany klucz łapie TypeScript
+# (TS1117) w CI „Frontend — typy i build”. Działa w git merge (lokalnie, claude-conflicts.yml).
+frontend/src/i18n/*.ts merge=union

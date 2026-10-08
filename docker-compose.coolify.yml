@@ -1,0 +1,179 @@
+# Wdrożenie w Coolify (Hetzner): jeden kontener aplikacji (API + panel) + PostgreSQL
+# + opcjonalna brama HTTP, która na JEDNEJ domenie wystawia obok panelu inne aplikacje
+# (n8n ma własny stack: docker-compose.n8n.yml — instrukcja: docs/N8N.md).
+# Domenę i HTTPS zapewnia proxy Coolify — wskaż usługę „app”, port 8000
+# (albo „gateway”, port 80, gdy włączasz bramę).
+# Zmienne SECRET_KEY / POSTGRES_PASSWORD / ADMIN_PASSWORD ustaw w Coolify
+# (zakładka Environment Variables) — instrukcja: docs/DEPLOY_COOLIFY.md
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    # INFRA-004: bazy NIE limitujemy (twarde zabicie Postgresa = ryzyko dla danych); przy
+    # braku RAM ma zarezerwowaną pamięć, a OOM killer wybiera najpierw app (oom_score_adj niżej)
+    mem_reservation: 768m
+    environment:
+      POSTGRES_DB: timporye
+      POSTGRES_USER: timporye
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timporye"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:   # rotacja docker logs — bez niej dysk hosta może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.coolify
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:-dev}   # OBS-006: SHA commita → APP_VERSION w obrazie
+    # INFRA-008: init (tini) jako PID 1 — przekazuje sygnały, sprząta procesy potomne (tesseract),
+    # a strażnik z HEALTHCHECK (scripts/healthcheck.py) może zakończyć zawieszoną aplikację;
+    # wtedy kontener wychodzi i `restart` stawia go od nowa (Docker sam „unhealthy” nie restartuje)
+    init: true
+    restart: unless-stopped
+    # INFRA-004: OCR (Tesseract), ML i import nie mogą zagłodzić Postgresa. Limit twardy RAM
+    # (+ tyle samo swapu, jeśli jest) i CPU; po pomiarze `python -m scripts.bench_invoice_memory`
+    # zmień w Coolify: APP_MEM_LIMIT / APP_CPUS. Domyślnie 1 — Docker odrzuca `cpus` większe niż
+    # liczba rdzeni hosta (więcej niż rdzeni hosta = błąd startu).
+    # oom_score_adj > 0: przy braku RAM na hoście OOM killer ubija app (restart), nie bazę.
+    # Dodatni — ujemny dla bazy wymaga uprawnień, których nie ma np. Docker w LXC/rootless.
+    mem_limit: ${APP_MEM_LIMIT:-1536m}
+    cpus: ${APP_CPUS:-1}
+    oom_score_adj: 500
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}   # po HTTP też production + ALLOW_INSECURE_HTTP=true (nie staging)
+      DATABASE_URL: postgresql+psycopg2://timporye:${POSTGRES_PASSWORD}@db:5432/timporye
+      SECRET_KEY: ${SECRET_KEY}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}   # false tylko bez HTTPS (sieć wewnętrzna)
+      ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-false}   # instancja bez HTTPS: production + true (tylko zwalnia SECURE_COOKIES)
+      # adres panelu w linkach e-mail (reset hasła, awizacja) — WYMAGANY w produkcji
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # ochrona przed host-header injection (domena panelu, CSV); puste = bez filtra.
+      # Gdy n8n woła API po adresie wewnętrznym (http://app:8000), dopisz tu „app" —
+      # inaczej filtr Hosta odrzuci te żądania (400).
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # liczba zaufanych proxy (Coolify/Traefik = 1; z bramą nginx = 2) — poprawne IP
+      # klienta do limitów logowania i API
+      TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
+      # sieci, z których przychodzi proxy (CSV CIDR) — XFF ufamy tylko od nich; aplikacja
+      # i uvicorn --forwarded-allow-ips. Sieć Traefika: docker network inspect coolify
+      TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-172.16.0.0/12,127.0.0.1/32}
+      # globalny limit żądań API na IP w oknie minutowym (0 = wyłączony)
+      API_RATE_LIMIT_PER_MINUTE: ${API_RATE_LIMIT_PER_MINUTE:-300}
+      UPLOADS_DIR: /data/uploads
+      BACKUP_DIR: /data/backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_PING_URL: ${BACKUP_PING_URL:-}   # heartbeat monitora (np. Uptime Kuma)
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-8}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-12}
+      TRACKING_INTERVAL_HOURS: ${TRACKING_INTERVAL_HOURS:-12}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-timporye@localhost}
+      TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+      # Awizacja dwuetapowa — maile do spedycji (graph|smtp|console); konfiguracja M365: README
+      MAIL_BACKEND: ${MAIL_BACKEND:-}
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
+      MAIL_SENDER: ${MAIL_SENDER:-}
+      # SharePoint → sync kolejki (Graph, Sites.Selected read) — puste = wyłączone; docs/SHAREPOINT-SYNC.md
+      SHAREPOINT_TENANT_ID: ${SHAREPOINT_TENANT_ID:-}
+      SHAREPOINT_CLIENT_ID: ${SHAREPOINT_CLIENT_ID:-}
+      SHAREPOINT_CLIENT_SECRET: ${SHAREPOINT_CLIENT_SECRET:-}
+      SHAREPOINT_SITE: ${SHAREPOINT_SITE:-}
+      SHAREPOINT_QUEUE_PATH: ${SHAREPOINT_QUEUE_PATH:-}
+      SHAREPOINT_QUEUE_COMPANY: ${SHAREPOINT_QUEUE_COMPANY:-}
+      SHAREPOINT_QUEUE_INTERVAL_MINUTES: ${SHAREPOINT_QUEUE_INTERVAL_MINUTES:-15}
+      AVIZO_STAGE1_DAYS: ${AVIZO_STAGE1_DAYS:-7}
+      AVIZO_STAGE2_DAYS: ${AVIZO_STAGE2_DAYS:-5}
+      DRIVER_DATA_RETENTION_DAYS: ${DRIVER_DATA_RETENTION_DAYS:-90}
+      AUDIT_AUTH_RETENTION_DAYS: ${AUDIT_AUTH_RETENTION_DAYS:-90}
+      TOKEN_RETENTION_DAYS: ${TOKEN_RETENTION_DAYS:-30}
+      SMS_RETENTION_DAYS: ${SMS_RETENTION_DAYS:-90}
+      CLIENT_ERROR_RETENTION_DAYS: ${CLIENT_ERROR_RETENTION_DAYS:-30}
+      NOTIFICATION_RETENTION_DAYS: ${NOTIFICATION_RETENTION_DAYS:-90}
+      # Automatyzacje (n8n) — puste = integracja wyłączona; szczegóły: docs/N8N.md
+      AUTOMATION_API_TOKEN: ${AUTOMATION_API_TOKEN:-}
+      AUTOMATION_ACTOR_LOGIN: ${AUTOMATION_ACTOR_LOGIN:-n8n}
+      AUTOMATION_WEBHOOK_URL: ${AUTOMATION_WEBHOOK_URL:-}
+      AUTOMATION_WEBHOOK_SECRET: ${AUTOMATION_WEBHOOK_SECRET:-}
+      # trwały plik logów z rotacją (przeżywa Redeploy), np. /data/logs/app.log; puste = tylko stdout
+      LOG_FILE: ${LOG_FILE:-}
+      # strażnik HEALTHCHECK (INFRA-008): tyle kolejnych braków odpowiedzi (co 30 s) → restart; 0 = wyłączony
+      HEALTH_RESTART_AFTER: ${HEALTH_RESTART_AFTER:-6}
+    volumes:
+      - uploads:/data/uploads
+      - backups:/data/backups   # trwałe kopie zapasowe — przeżywają redeploy (BEZ tego backupy giną)
+      - logs:/data/logs         # trwałe logi (LOG_FILE) — przeżywają redeploy
+      # BEZ /proc hosta (BUILD-008/INFRA-006): przy włamaniu do aplikacji dawał wgląd we wszystkie
+      # procesy serwera. Monitor RAM pokazuje wtedy procesy kontenera app (rozbicie pamięci hosta
+      # z /proc/meminfo działa dalej); procesy całego serwera — narzędziem poza aplikacją.
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:   # rotacja docker logs — bez niej dysk hosta może się zapchać
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # --- Brama HTTP (jedna domena, kilka aplikacji) ---
+  # Jeden publiczny host i jeden port 443: „/" to panel, „/n8n/..." to OSOBNY stack n8n
+  # (docker-compose.n8n.yml, własny cykl życia). Dopisanie kolejnej aplikacji = jeden
+  # blok location w deploy/gateway/timporye.conf. Instrukcja: docs/N8N.md.
+  #
+  # DOMYŚLNIE NIEAKTYWNA (profil „gateway"): dopóki jej nie włączysz, domena zostaje
+  # na serwisie „app" i nic się nie zmienia. Włączenie = COMPOSE_PROFILES=gateway
+  # + utworzenie sieci `docker network create timporye-apps` + przeniesienie domeny
+  # w Coolify z „app" na „gateway" (port 80) + TRUSTED_PROXY_COUNT=2.
+  gateway:
+    image: nginx:1.27-alpine
+    profiles: ["gateway"]
+    restart: unless-stopped
+    mem_limit: 128m   # INFRA-004: nginx jako proxy potrzebuje kilkunastu MB
+    cpus: 0.5
+    volumes:
+      - ./deploy/gateway/timporye.conf:/etc/nginx/conf.d/default.conf:ro
+    expose:
+      - "80"
+    depends_on:
+      - app
+    networks:
+      - default      # panel w tym samym stacku
+      - apps         # stack n8n (i kolejne aplikacje) — sieć współdzielona
+    logging:   # rotacja docker logs — bez niej access log nginx rośnie z każdym żądaniem
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  pgdata:
+  uploads:
+  backups:
+  logs:
+
+networks:
+  # Sieć współdzielona z niezależnymi stackami (n8n i kolejne aplikacje). Utwórz RAZ
+  # na serwerze przed włączeniem profilu „gateway":  docker network create timporye-apps
+  apps:
+    external: true
+    name: timporye-apps

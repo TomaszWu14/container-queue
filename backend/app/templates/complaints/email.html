@@ -1,0 +1,17 @@
+{% from "mail/_parts.html" import signature %}
+<div style='font-family:Calibri,Arial,sans-serif;font-size:14px'>
+<p>Dzień dobry,</p>
+<p>zgłaszamy reklamację nr <b>{{ number }}</b> dotyczącą dostawy
+kontenera <b>{{ container_no }}</b>.</p>
+<table border='1' cellspacing='0' cellpadding='6'
+       style='border-collapse:collapse;font-size:13px'>
+<tr><td style='background:#f3f4f6'><b>Nr reklamacji</b></td><td>{{ number }}</td></tr>
+<tr><td style='background:#f3f4f6'><b>Kontener</b></td><td>{{ container_no }}</td></tr>
+<tr><td style='background:#f3f4f6'><b>Problemy</b></td><td>{{ problems }}</td></tr>
+<tr><td style='background:#f3f4f6'><b>Opis</b></td><td>{{ description|nl2br or '—' }}</td></tr>
+</table>
+{% if photos %}<p>Dołączono zdjęć: <b>{{ photos }}</b> (dostępne w systemie).</p>{% endif %}
+{% if message %}<p>{{ message|nl2br }}</p>{% endif %}
+<p>Prosimy o odniesienie się do reklamacji i wyjaśnienie sprawy.</p>
+{{ signature() }}
+</div>

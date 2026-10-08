@@ -1,0 +1,140 @@
+/* Kalendarz, sekcje planowania, widok tygodniowy kolejki — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* --- Kalendarz (CalendarPage) — reskin wg makiety „Kalendarz awizacji" ---- */
+.cal-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.cal-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.cal-title { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-xl); line-height: var(--lh-xl); color: var(--text); }
+.cal-sub { margin-top: 5px; font-size: 13px; color: var(--muted); max-width: 640px; }
+.cal-year-step { display: flex; align-items: center; gap: 2px; padding: 3px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 3px; }
+.cal-year-step button { width: 30px; height: 28px; border: 0; border-radius: 3px; background: transparent;
+  color: var(--muted); font-size: 15px; }
+.cal-year-step button:hover { background: var(--soft); color: var(--accent-ink); }
+.cal-year-step span { min-width: 58px; text-align: center; font-size: 15px; font-weight: 700; color: var(--text); }
+/* .kpi / .kpi-label / .kpi-unit / .mini-title — współdzielone z Pulpitem (zdefiniowane wyżej) */
+.cal-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: var(--panel); margin-bottom: 16px; }
+.cal-kpi-row { display: flex; align-items: baseline; gap: 7px; margin-top: 6px; }
+.cal-kpi-value { font-size: 24px; font-weight: 700; line-height: 1.1; }
+/* widok roku: 12 mini-miesięcy z heat-mapą */
+/* auto-fit (nie auto-fill): bez pustych kolumn-widm — karty miesięcy rosną z ekranem */
+.cal-year-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.cal-mini { padding: 12px 12px 10px; }
+.cal-mini-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding-bottom: 9px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.cal-mini-name { padding: 0; border: 0; background: transparent; font: inherit; font-size: 15px;
+  font-weight: 700; color: var(--text); cursor: pointer; }
+.cal-mini-name:hover { color: var(--accent-ink); }
+.cal-mini-sum { font-size: 12px; color: var(--muted); }
+.cal-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-wd { padding-bottom: 5px; text-align: center; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.cal-mini-day { display: flex; align-items: center; justify-content: center; height: 38px;
+  border-radius: 3px; font-size: 14px; cursor: pointer; }
+.cal-mini-day:hover { box-shadow: inset 0 0 0 999px rgba(20, 34, 51, 0.03); }
+/* widok miesiąca: duży kalendarz + sidebar */
+.cal-month-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+@media (max-width: 900px) { .cal-month-layout { grid-template-columns: 1fr; } }
+.cal-month-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 14px; background: linear-gradient(120deg, #0d1f36, #14304f, #1b3f68); }
+.cal-month-bar button { width: 28px; height: 28px; border: 1px solid #294864; border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06); color: #eaf2ff; }
+.cal-month-bar button:hover { background: rgba(255, 255, 255, 0.14); }
+.cal-month-name { font-size: 18px; font-weight: 700; color: #eaf2ff; }
+.cal-month-name .mono { font-size: 14px; font-weight: 400; color: #79aefc; }
+.cal-month-wd { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.cal-month-wd div { padding: 8px 10px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.cal-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+/* komórki rosną z oknem: min ~9rem, docelowo ~1/7 wysokości viewportu ponad chrome strony */
+.cal-cell { display: flex; flex-direction: column; gap: 6px; min-height: max(128px, calc((100vh - 420px) / 6)); padding: 9px 10px;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); cursor: pointer; }
+.cal-cell:hover { box-shadow: inset 0 0 0 999px rgba(20, 34, 51, 0.02); }
+.cal-cell-empty { background: var(--surface-2); cursor: default; min-height: max(128px, calc((100vh - 420px) / 6)); }
+.cal-cell-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.cal-flag { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cal-cell-note { font-size: 13px; line-height: 1.35; color: var(--muted); }
+.cal-cell-spacer { flex: 1; }
+.cal-bar { height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.cal-bar i { display: block; height: 100%; border-radius: 999px; }
+.cal-cell-load { font-size: 12px; color: var(--muted); }
+.cal-side { display: flex; flex-direction: column; gap: 12px; }
+.cal-hol { display: flex; align-items: baseline; gap: 9px; padding: 5px 0; }
+.cal-hol-date { font-size: 12px; font-weight: 600; color: var(--danger); }
+.cal-hol-name { font-size: 13px; color: var(--text); }
+.cal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 16px;
+  padding: 11px 15px; background: var(--panel); border: 1px solid var(--border); border-radius: 3px; }
+.cal-leg { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.cal-leg i { width: 16px; height: 16px; border-radius: 5px; display: inline-block; }
+
+/* --- sekcje planowania w kolejce (potwierdzone / wysłane / propozycje) --- */
+/* .tile-board jest flex-column, więc sekcja też — nie udajemy grida */
+.plan-section { display: flex; flex-direction: column; gap: inherit; }
+/* „?” przy przycisku grupy, nie w osobnej linii */
+.plan-head-row { display: flex; align-items: center; gap: 6px; }
+.plan-header {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 14px; margin: 2px 0 0; border-radius: 999px; min-height: 32px;
+  font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--muted); background: var(--soft);
+  border: 1px solid var(--border); cursor: pointer;
+}
+.plan-header:hover { color: var(--text); background: var(--accent-soft); border-color: var(--accent); }
+/* kolor niesie stan planu: potwierdzone = pewne, propozycja = jeszcze nasza */
+.plan-potwierdzone > .plan-header { color: var(--accent-ink); background: var(--accent-soft);
+                                    border-color: var(--accent-soft); }
+.plan-note { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+/* nie jest kolumną kafelka — separator z .tile > *::after tu nie pasuje */
+.plan-note::after { content: none; }
+.plan-alert { color: var(--danger); font-weight: 600; }
+.move-warning {
+  margin: 0 0 10px; padding: 8px 12px; border-radius: 3px;
+  color: var(--danger); background: var(--danger-bg); border: 1px solid color-mix(in srgb, var(--danger-ink) 30%, transparent); font-size: 13px;
+}
+
+.rowh { display: inline-flex; align-items: center; gap: 8px; }
+.rowh-label {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap;
+}
+.rowh .seg button { font-size: 12px; padding: 6px 12px; }
+
+/* magazyny wypełniają wolną przestrzeń — kafli jest tyle, ile realnie w zakresie */
+.qs-warehouses { flex: 1; min-width: 320px; gap: 7px; }
+
+/* akcenty magazynów — te same, którymi zakładki firm znaczą spółki */
+/* DLT/ACME z tokenów --wh-* (tint/line/ink) — jedno źródło z kolejką (S6) */
+.wh-acme      { --wh-ink: var(--wh-acme-ink); --wh-tint: var(--wh-acme-bg); --wh-line: var(--wh-acme-border); }
+.wh-dlt        { --wh-ink: var(--wh-dlt-ink); --wh-tint: var(--wh-dlt-bg); --wh-line: var(--wh-dlt-border); }
+.wh-borealis     { --wh-co: var(--co-borealis); }
+.wh-iberia { --wh-co: var(--co-pt); }
+.wh-cobaltsport{ --wh-co: var(--co-cobalt); }
+/* magazyny spółek bez własnych tokenów --wh-*: odcień z koloru spółki (--co-*), więc działa też w ciemnym motywie */
+.wh-borealis, .wh-iberia, .wh-cobaltsport { --wh-ink: var(--wh-co);
+  --wh-tint: color-mix(in srgb, var(--wh-co) 12%, var(--panel)); --wh-line: color-mix(in srgb, var(--wh-co) 40%, var(--panel)); }
+
+/* badge ryzyka (moduł Specjalna troska) */
+.badge-danger {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  background: var(--danger-bg); color: var(--danger-ink); border: 1px solid color-mix(in srgb, var(--danger-ink) 30%, transparent);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.badge-ok {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  background: var(--success-bg); color: var(--success-ink); border: 1px solid color-mix(in srgb, var(--success-ink) 30%, transparent);
+  font-size: 12px; font-weight: 600;
+}
+
+/* --- komórki wielowartościowe (PO / SENT) --- */
+.multi-cell { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.multi-values { display: inline-flex; flex-direction: column; gap: 1px; min-width: 0; }
+.multi-values span { overflow: hidden; text-overflow: ellipsis; }
+.multi-more {
+  padding: 2px 8px; border-radius: 999px; cursor: pointer;
+  background: var(--accent-soft); border: 1px solid var(--border); color: var(--accent-ink);
+  font: inherit; font-size: 11px; font-weight: 700; line-height: 1.5; white-space: nowrap;
+}
+.multi-more:hover { border-color: var(--accent); }
+.multi-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+

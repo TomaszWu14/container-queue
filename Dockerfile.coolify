@@ -1,0 +1,70 @@
+# Obraz „wszystko w jednym” dla Coolify: API + panel webowy serwowane z jednego
+# kontenera. Panel budowany ZE ŹRÓDEŁ w obrazie — nie zależymy
+# od commitowanego frontend/dist (usunięty ze śledzenia, by nie było konfliktów bundli).
+#
+# Cache: kolejność warstw od najrzadziej do najczęściej zmienianych; menedżery pakietów
+# (apt/pip/npm) mają cache BuildKit (--mount=type=cache — zawartość NIE trafia do obrazu),
+# więc zmiana requirements.txt / package-lock.json nie pobiera wszystkiego od nowa.
+# pip dalej weryfikuje --require-hashes — cache tylko skraca pobieranie.
+
+# ---- 1) build frontendu ze źródeł ----
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS frontend
+WORKDIR /fe
+COPY frontend/package.json frontend/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# ---- 2) backend + serwowanie panelu ----
+FROM python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# postgresql-client: pg_dump/psql do automatycznych backupów i odtwarzania bazy
+# tesseract-ocr (+pol/eng): OCR skanów w module Faktury → Excel (OCR_LANG=pol+eng)
+# docker-clean usunięty, żeby pobrane .deb zostawały w cache BuildKit (nie w obrazie)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client \
+        tesseract-ocr tesseract-ocr-pol tesseract-ocr-eng
+
+# użytkownik PRZED kopiowaniem kodu: COPY --chown zamiast `chown -R` po fakcie
+# (ten dublował całe /app w osobnej warstwie i działał przy każdej zmianie kodu)
+RUN useradd --create-home --uid 1000 timporye \
+    && mkdir -p /app /data/uploads /data/backups /data/logs \
+    && chown timporye:timporye /app /data /data/uploads /data/backups /data/logs
+
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --require-hashes -r requirements.txt
+
+COPY --chown=timporye:timporye backend/alembic.ini .
+COPY --chown=timporye:timporye backend/migrations ./migrations
+COPY --chown=timporye:timporye backend/scripts ./scripts
+COPY --chown=timporye:timporye backend/app ./app
+COPY --from=frontend --chown=timporye:timporye /fe/dist ./frontend-dist
+
+ENV FRONTEND_DIST=/app/frontend-dist
+# OBS-006: SHA wdrożenia w /api/health i Sentry. Coolify przekazuje SOURCE_COMMIT jako build arg
+# (opcja „Include Source Commit in Build”); bez niego zostaje „dev”. ARG na końcu = cache warstw nietknięty.
+ARG SOURCE_COMMIT=dev
+ENV APP_VERSION=${SOURCE_COMMIT}
+USER timporye
+
+EXPOSE 8000
+# INFRA-008: /api/health + strażnik zawieszenia (scripts/healthcheck.py): ~3 min bez odpowiedzi
+# po wcześniejszym „zdrowym” stanie → koniec procesu → restart kontenera (init: true w compose).
+# start-period 120 s: migracja Alembica przy starcie nie liczy się jako awaria.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD ["python", "scripts/healthcheck.py"]
+# --proxy-headers: prawdziwe IP klienta zza proxy Coolify (rate limiting, audyt logowań).
+# forwarded-allow-ips = TRUSTED_PROXY_CIDRS, ta sama lista co w aplikacji (config.py) —
+# tylko sieć dockera proxy, NIE '*' ani 10.0.0.0/8 (sieć firmowa podrobiłaby X-Forwarded-For
+# → obejście limitu logowań, SEC-002). Aplikacja bierze IP z prawej strony XFF (TRUSTED_PROXY_COUNT).
+# Liczba workerów: uvicorn sam czyta WEB_CONCURRENCY (brak --workers = domyślnie 1); aplikacja
+# odmawia startu przy WEB_CONCURRENCY>1, póki limiter logowań jest w pamięci (docs/JEDNA-INSTANCJA.md).
+# `exec`: uvicorn zastępuje powłokę — SIGTERM z `docker stop` trafia do niego (łagodne zamknięcie).
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=\"${TRUSTED_PROXY_CIDRS:-172.16.0.0/12,127.0.0.1/32}\""]

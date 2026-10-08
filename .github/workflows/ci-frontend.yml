@@ -1,0 +1,63 @@
+name: CI — frontend
+
+# Oszczędność minut Actions: typy + build odpalają się tylko przy PR do main,
+# który rusza kod frontendu (filtr paths), i tylko na żądanie. Kolejny push do
+# tego samego PR-a ubija poprzedni bieg (concurrency).
+# Drafty nie odpalają CI (oszczędność minut Actions): job rusza dopiero po
+# oznaczeniu PR jako „ready for review" (types: ready_for_review) albo przy pushu do
+# gotowego PR-a (synchronize). Draft = job pomijany bramką `if` (bez przydziału runnera).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
+      - 'scripts/check_file_lengths.py'
+  workflow_dispatch:
+
+concurrency:
+  # draft w osobnej grupie — nie anuluje biegu „ready” (wyścig draft→ready, PR #796; security.yml)
+  group: ci-frontend-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    # draft: inna nazwa checku — pominięty bieg nie przesłoni wyniku w automerge (REQUIRED)
+    name: ${{ github.event.pull_request.draft && 'Frontend — typy i build (draft — pominięty)' || 'Frontend — typy i build' }}
+    runs-on: ubuntu-latest
+    # pomijaj drafty; workflow_dispatch nie ma pull_request → wyrażenie = true (rusza)
+    if: ${{ !github.event.pull_request.draft }}
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: python3 ../scripts/check_file_lengths.py   # limit 500 linii/plik
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend/tools/eslint/package-lock.json
+      - run: npm ci
+      # ESLint (CODE-002): osobny pakiet tools/eslint — typescript-eslint wymaga TS < 6.1
+      - run: npm run lint:setup
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      # strażnik ścieżek /api (backend/tests/test_front_api_paths.py: literał /api/... z frontu
+      # musi trafiać w trasę backendu). Dotąd tylko w „Backend — pytest”, którego PR ruszający
+      # sam frontend nie odpala — tu sam ten jeden test (zależności z cache pip jak w ci-backend)
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install --require-hashes -r requirements.txt -r requirements-dev.txt
+        working-directory: backend
+      - run: python -m pytest tests/test_front_api_paths.py -q
+        working-directory: backend

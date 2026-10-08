@@ -1,0 +1,57 @@
+/* Kolejka Enterprise (plaster 5): zapisane widoki + zakładki szuflady Dokumenty/Wiadomości/Koszty */
+
+/* zapisane widoki — dodatkowe zakładki + „+ Zapisz widok" (makieta) */
+.kq-saved { display: inline-flex; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.kq-saved > button:first-child {
+  background: none; border: none; padding: 8px 4px 8px 12px; font: inherit; font-size: 13px;
+  color: var(--muted); cursor: pointer;
+}
+.kq-saved.active { border-bottom-color: var(--accent); }
+.kq-saved.active > button:first-child { color: var(--accent); font-weight: 700; }
+.kq-saved-x {
+  background: none; border: none; cursor: pointer; color: var(--muted); font-size: 10px; padding: 0 6px;
+  visibility: hidden;
+}
+.kq-saved:hover .kq-saved-x, .kq-saved-x:focus-visible { visibility: visible; }
+.kq-save-view {
+  background: none; border: none; cursor: pointer; font: inherit; font-size: 13px;
+  color: var(--accent); padding: 8px 10px;
+}
+
+/* 5 zakładek w szufladzie 360–420px: jedna linia, ciaśniej, przewijanie zamiast łamania */
+.kq-dr-tabs { overflow-x: auto; scrollbar-width: none; }
+.kq-dr-tabs button { white-space: nowrap; padding: 8px 7px; flex: none; }
+
+/* Dokumenty */
+.kq-docs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.kq-docs li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.kq-doc-ico {
+  width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center;
+  justify-content: center; font-style: normal; font-size: 10px; font-weight: 700;
+  background: var(--accent-soft); color: var(--accent-ink);
+}
+.kq-doc-ico.pdf { background: var(--danger-bg); color: var(--danger-ink); }
+.kq-doc-main { min-width: 0; display: flex; flex-direction: column; }
+.kq-doc-main b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kq-doc-main small { font-size: 11px; color: var(--muted); }
+.kq-link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 12px; font-weight: 600; }
+.kq-batch-docs h4 { margin: 10px 0 4px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Wiadomości */
+.kq-msgs { display: flex; flex-direction: column; gap: 10px; }
+.kq-msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 85%; }
+.kq-msg.mine { align-self: flex-end; align-items: flex-end; }
+.kq-msg small { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.kq-bubble { padding: 7px 11px; border-radius: 10px; background: var(--surface-2); font-size: 13px; white-space: pre-wrap; }
+.kq-msg.mine .kq-bubble { background: var(--accent); color: var(--text-on-fill); }
+.kq-msg-form { display: flex; gap: 8px; align-items: flex-end; }
+.kq-msg-form textarea { flex: 1; resize: vertical; font: inherit; font-size: 13px; }
+
+/* Koszty */
+.kq-costs { margin: 0; display: flex; flex-direction: column; font-size: 13px; }
+.kq-costs > div {
+  display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.kq-costs dt small { color: var(--muted); }
+.kq-costs dd { margin: 0; text-align: right; white-space: nowrap; }
+.kq-costs-total { border-top: 1px solid var(--border); font-weight: 700; }

@@ -1,0 +1,413 @@
+/* słowniki, statusy, formularze, Pulpit, Agencja celna, reklamacje, wyceny — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* Tabele słowników w panelu admina: table-layout:auto dobiera szerokość kolumn do treści,
+   więc nagłówki (np. AKTYWNY) się mieszczą, a wąskie słowniki nie są rozpychane. To jedna
+   tabela, więc thead i tbody i tak trzymają tę samą siatkę; colgroup przypina szerokości
+   tam, gdzie trzeba (kolumna akcji). */
+table.grid.dict-table { table-layout: auto; }
+table.grid.dict-table td { overflow-wrap: anywhere; }
+table.grid.dict-table td input, table.grid.dict-table td select { max-width: 100%; }
+.dict-empty { color: var(--muted); }
+
+/* podejrzenie duplikatu w słowniku — ostrzeżenie, nie błąd: wpis bywa poprawny */
+.dup-mark {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 2px;
+  border: 1px solid var(--accent-ink); color: var(--accent-ink);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; cursor: help;
+}
+
+/* chip statusu neutralny: tło chrome, tekst accent, mono (konsola operacyjna) */
+.badge {
+  display: inline-block; padding: 2px 9px; border-radius: 2px;
+  background: var(--chrome); color: var(--chrome-text);  /* --accent na chrome = 3.3:1 */
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+/* Główny transport: pigułka z ikoną (TransportBadge.tsx; kolor = tryb, tokeny --tr-*) */
+.tr-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 6px; white-space: nowrap;
+  border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1.2; vertical-align: middle;
+}
+.tr-badge svg { flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.tr-badge--md { gap: 7px; padding: 4px 11px 4px 7px; font-size: 13px; }
+.tr-badge--morski   { color: var(--tr-sea); background: var(--tr-sea-bg); }
+.tr-badge--lotniczy { color: var(--tr-air); background: var(--tr-air-bg); }
+.tr-badge--intermodal { color: var(--tr-inter); background: var(--tr-inter-bg); }
+.tr-badge--drogowo   { color: var(--tr-truck); background: var(--tr-truck-bg); }
+.tr-badge--kola  { color: var(--tr-road);  background: var(--tr-road-bg); }
+.tr-badge--kolej { color: var(--tr-rail);  background: var(--tr-rail-bg); }
+.tr-badge--inne  { color: var(--tr-other); background: var(--tr-other-bg); }
+.tr-select { display: flex; align-items: center; gap: 8px; }
+.tr-select select { flex: 1; min-width: 0; }
+/* wybór trybu jako przyciski z pigułką (filtr kolejki, formularz kontenera) — natywny <select> nie pokaże ikon */
+.tr-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.tr-pick button { padding: 0; border: 0; border-radius: 999px; background: none; cursor: pointer; }
+.tr-pick button[aria-pressed='true'] .tr-badge { box-shadow: inset 0 0 0 1.5px currentColor; }
+.tr-pick button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Statusy kontenera jako pigułki wg dokumentu „Kolejka - palety"; chipy semantyczne
+   zachowują własne kolory — tylko kształt ujednolicony do 2px (konsola operacyjna) */
+/* Statusy kontenera — miękkie pastele z design systemu (Claude Design): jasne tło +
+   kolorowy tekst, pigułka. Spójne z chipami celnymi (cs-*) i chłodnym płótnem. */
+.badge.st-ZAPOWIEDZIANY, .badge.st-W_PRODUKCJI, .badge.st-TRANSPORT_WSTEPNY, .badge.st-W_TRANSPORCIE, .badge.st-W_PORCIE,
+.badge.st-ODPRAWA, .badge.st-AWIZOWANY, .badge.st-W_DOSTAWIE,
+.badge.st-DOSTARCZONY, .badge.st-ZREALIZOWANY,
+.badge.cs-ODPRAWIONY, .badge.cs-ZWOLNIONY {
+  border-radius: 999px; padding: 3px 10px;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+/* statusy: tokeny --st-*-bg/-ink z 00-tokens.css (jasny = dotychczasowe wartości AA, ciemny = tinty) */
+.badge.st-ZAPOWIEDZIANY { background: var(--st-ZAPOWIEDZIANY-bg); color: var(--st-ZAPOWIEDZIANY-ink); }
+.badge.st-W_PRODUKCJI { background: var(--st-W_PRODUKCJI-bg); color: var(--st-W_PRODUKCJI-ink); }
+.badge.st-TRANSPORT_WSTEPNY { background: var(--st-TRANSPORT_WSTEPNY-bg); color: var(--st-TRANSPORT_WSTEPNY-ink); }
+.badge.st-W_TRANSPORCIE { background: var(--st-W_TRANSPORCIE-bg); color: var(--st-W_TRANSPORCIE-ink); }
+.badge.st-W_PORCIE { background: var(--st-W_PORCIE-bg); color: var(--st-W_PORCIE-ink); }
+.badge.st-ODPRAWA { background: var(--st-ODPRAWA-bg); color: var(--st-ODPRAWA-ink); }
+.badge.st-AWIZOWANY { background: var(--st-AWIZOWANY-bg); color: var(--st-AWIZOWANY-ink); }
+.badge.st-W_DOSTAWIE { background: var(--st-W_DOSTAWIE-bg); color: var(--st-W_DOSTAWIE-ink); }
+.badge.st-DOSTARCZONY { background: var(--st-DOSTARCZONY-bg); color: var(--st-DOSTARCZONY-ink); }
+.badge.st-ZREALIZOWANY { background: var(--st-ZREALIZOWANY-bg); color: var(--st-ZREALIZOWANY-ink); }
+.badge.cs-BRAK { background: var(--soft); color: var(--muted); }
+/* odprawa / dokumenty / zakupy: tokeny semantyczne (info/warning/success/danger) i odcienie etapów
+   — mają wariant ciemny (A8: pastelowe pigułki świeciły w dark mode jak plamy) */
+.badge.cs-DOKUMENTY_KOMPLETNE { background: var(--info-bg); color: var(--info-ink); }
+.badge.cs-ZLECONA { background: var(--warning-bg); color: var(--warning-ink); }
+.badge.cs-DRAFT_WYSLANY { background: var(--st-AWIZOWANY-bg); color: var(--st-AWIZOWANY-ink); }
+.badge.cs-DRAFT_POTWIERDZONY { background: var(--st-W_PRODUKCJI-bg); color: var(--st-W_PRODUKCJI-ink); }
+.badge.cs-ODPRAWIONY { background: var(--success-bg); color: var(--success-ink); }
+/* zwolniony (SAD-PW, można wydać) — zieleń odprawionego + obwódka, odróżnialne też w dark */
+.badge.cs-ZWOLNIONY { background: var(--success-bg); color: var(--success-ink); box-shadow: inset 0 0 0 1px var(--success-ink); }
+.badge.cs-REWIZJA { background: var(--danger-bg); color: var(--danger-ink); }
+/* obieg dokumentów (§10.4) */
+.badge.ds-BRAK { background: var(--soft); color: var(--muted); }
+.badge.ds-ZALACZONE { background: var(--info-bg); color: var(--info-ink); }
+.badge.ds-WYSLANE { background: var(--success-bg); color: var(--success-ink); }
+.badge.ps-BRAK { background: var(--soft); color: var(--muted); }
+.badge.ps-DO_ZAMOWIENIA { background: var(--st-AWIZOWANY-bg); color: var(--st-AWIZOWANY-ink); }
+.badge.ps-ZAMOWIONE { background: var(--info-bg); color: var(--info-ink); }
+.badge.ps-POTWIERDZONE { background: var(--st-W_PORCIE-bg); color: var(--st-W_PORCIE-ink); }
+.badge.ps-ZREALIZOWANE { background: var(--success-bg); color: var(--success-ink); }
+.badge.ps-WSTRZYMANE { background: var(--warning-bg); color: var(--warning-ink); }
+/* „opóźnione" — jedyny mocny akcent koloru (design system): pełna czerwień, pigułka */
+.badge.delayed {
+  background: var(--danger-fill); color: var(--text-on-fill); border-radius: 999px; padding: 3px 10px;
+  font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+/* „utknął" = inna przyczyna niż opóźnienie (stoi w porcie, nikt nie awizował),
+   więc inny kolor: bursztyn „wymaga ruchu", nie czerwień „już źle" */
+.badge.stuck {
+  background: var(--accent-ink); color: var(--panel); border-radius: 999px; padding: 3px 10px;
+  font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+  margin-left: 4px; cursor: help;
+}
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(12, 22, 36, 0.5);
+  display: flex; align-items: flex-start; justify-content: center; padding: 4vh 16px; z-index: 60; overflow: auto;
+}
+.modal {
+  background: var(--panel); border-radius: var(--r-sm); padding: 20px; width: 100%;
+  max-width: 760px; box-shadow: var(--shadow-3);
+  /* okno przewija się samo — nagłówek i stopka [Anuluj][Zapisz] zostają w widoku */
+  max-height: 92vh; overflow: auto; overscroll-behavior: contain;
+}
+.modal:focus, .modal:focus-visible { outline: none; }
+.modal h2 { margin: 0 0 14px; font-size: 18px; }
+.modal-head {
+  position: sticky; top: -20px; z-index: 2; display: flex; align-items: flex-start; gap: var(--sp-3);
+  margin: -20px -20px 14px; padding: 20px 20px 10px; background: var(--panel);
+}
+.modal-head h2 { flex: 1; margin: 0; }
+.modal-x {
+  flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; margin: -4px -6px 0 0;
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.modal-x:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.modal-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 14px; }
+.form-grid label, .form-col label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+/* pełna szerokość: wszystkie label.wide + dowolny .wide TYLKO w modalu zlecenia
+   (nie ruszamy div.wide w innych formularzach, np. przycisk Zapisz w Admin/Współpraca) */
+.form-grid label.wide, .found-order .form-grid .wide { grid-column: 1 / -1; }
+.form-grid .form-checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); }
+.form-grid .form-checks label { flex-direction: row; align-items: center; gap: var(--sp-2); }
+.modal .actions {
+  display: flex; gap: 10px; justify-content: flex-end; margin: 16px -20px -20px;
+  position: sticky; bottom: -20px; z-index: 2; padding: 12px 20px 20px;
+  background: var(--panel); border-top: 1px solid var(--border);
+}
+/* telefon: modal = pełny ekran, stopka przyklejona do dołu (audyt C21/C22) */
+@media (max-width: 639px) {
+  .modal-backdrop { padding: 0; }
+  .modal { max-width: none !important; min-height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .modal-x { width: var(--tap); height: var(--tap); }
+}
+.modal.found-order { max-width: 860px; }
+/* weryfikacja faktury: 13 kolumn z polami edycji — 760px zmusza do przewijania w poziomie */
+.modal:has(> .invoice-review) { max-width: min(1240px, 96vw); }
+.invoice-review input.invalid { border-color: var(--danger-ink); background: var(--danger-bg); }
+.found-btn { background: var(--accent); }
+.found-order .contact-add {
+  display: grid; grid-template-columns: 1.2fr 1.4fr 1fr auto; gap: 8px;
+  align-items: end; padding: 8px; border: 1px dashed var(--border); border-radius: 3px;
+}
+.found-order .fx-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.found-order .fx-chip {
+  background: var(--info-bg); color: var(--info-ink); border-radius: 999px; padding: 2px 10px; font-weight: 600;
+}
+:root[data-theme='dark'] .found-order .fx-chip { background: rgba(11, 95, 255, 0.18); }
+.error { color: var(--danger); margin: 10px 0 0; font-size: 14px; white-space: pre-wrap; }
+
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.login-card {
+  background: var(--panel); padding: 32px; border-radius: 3px; border: 1px solid var(--border);
+  width: 340px; display: flex; flex-direction: column; gap: 12px;
+}
+.login-card h1 { font-size: 19px; margin: 0 0 6px; }
+.login-card label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.login-link { color: var(--accent-ink); font-size: 14px; text-decoration: none; text-align: center; }
+.login-link:hover { text-decoration: underline; }
+
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 20px; margin: 14px 0; }
+.detail-grid .item { font-size: 14px; }
+/* CODE-008: powód odrzucenia zlecenia transportowego pod listą */
+.to-reject { margin-top: var(--sp-2); }
+.panel.p0 > .to-reject { margin: 0; padding: var(--sp-3); }
+/* A26/C34: przełącznik pustych pól; na telefonie pola w 2 kolumnach zamiast długiej kolumny */
+.detail-toggle { background: none; border: 0; padding: 0; margin: 0 0 var(--sp-2); font: inherit;
+  font-size: var(--fs-sm); color: var(--accent-ink); cursor: pointer; }
+.detail-toggle:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2) var(--sp-3); }
+  .detail-grid .item { min-width: 0; overflow-wrap: anywhere; }
+  .detail-grid .badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+  /* A28: akcje nagłówka karty w jednym rzędzie na telefonie */
+  .ct-head-actions { gap: 6px; }
+  .ct-head-actions > .btn, .ct-head-actions .more-menu > .btn { padding: 8px 10px; }
+}
+/* A27: menu „Więcej” w nagłówku karty kontenera */
+.more-menu { position: relative; display: inline-flex; }
+.more-menu-pop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 60; min-width: 220px;
+  display: flex; flex-direction: column; padding: var(--sp-1); background: var(--panel);
+  border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-2); }
+.more-menu-pop > button { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3);
+  border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); font: inherit;
+  font-size: var(--fs-base); text-align: left; cursor: pointer; white-space: nowrap; }
+.more-menu-pop > button:hover, .more-menu-pop > button:focus-visible { background: var(--soft); }
+.detail-grid .item b { display: block; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-1);
+}
+.panel h3, .panel h2.as-h3 { margin: 0 0 10px; font-size: 16px; }
+
+/* Panel przyjęcie/porównanie (order-lines): 3-way zamówiono/przyjęto/zafakturowano */
+.order-lines .ol-grid { width: 100%; border-collapse: collapse; font-size: 14px; }
+.order-lines .ol-grid th { text-align: left; color: var(--muted); font-weight: 600;
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; padding: 4px 8px; }
+.order-lines .ol-grid td { padding: 5px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+.order-lines .ol-desc { font-size: 12px; margin-top: 1px; }
+.ol-ok { color: var(--success-ink); }
+.ol-warn { color: var(--warning-ink); }
+.ol-over { color: var(--danger-ink); font-weight: 600; }
+.ol-none { color: var(--muted); }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ---- Pulpit (Dashboard) — reskin wg makiety „Pulpit" z design systemu ---- */
+.dash-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.dash-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.dash-title { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-xl); line-height: var(--lh-xl); color: var(--text); }
+.dash-sub { margin-top: 5px; font-size: 13px; color: var(--muted); }  /* bez capitalize: po polsku nie każdy wyraz wielką (A4) */
+.dash-grid { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.dash-main { flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.dash-side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.dash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0; border: 1px solid var(--border); border-radius: 3px; overflow: hidden; background: var(--panel); }
+.kpi { padding: 14px 18px; background: var(--panel); border: 0; border-right: 1px solid var(--border); border-radius: 0; box-shadow: none; }
+.dash-kpis .kpi:last-child, .cal-kpis .kpi:last-child { border-right: 0; }
+.kpi:hover { border-color: var(--border); box-shadow: none; }
+.kpi-label { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.kpi-value { font-family: var(--font-mono); font-size: 30px; font-weight: 700; line-height: 1.05; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.kpi-unit { font-size: 12px; color: var(--muted); }
+/* karta-tabela: panel bez wewnętrznego paddingu, nagłówek + tabela na całą szerokość */
+.dash-card { padding: 0; overflow: hidden; }
+.dash-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.dash-card-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.dash-card table.grid th { position: sticky; top: 0; }
+.count-chip { padding: 2px 9px; border-radius: 999px; background: var(--soft);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+/* --- Wieża kontrolna (dashboard 1a): kafelki KPI z akcentową obwódką --- */
+.ctl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-bottom: 14px; }
+.ctl-kpi { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--border);
+  border-radius: var(--radius, 8px); padding: 12px 14px 14px; }
+.ctl-kpi.danger { border-left-color: var(--danger); }
+.ctl-kpi.amber { border-left-color: #d99e00; }
+.ctl-kpi.sky { border-left-color: var(--accent); }
+.ctl-kpi-label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted-strong); }
+.ctl-kpi-value { font-size: 32px; font-weight: 800; line-height: 1.1; margin-top: 4px; color: var(--text); }
+.ctl-kpi-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ctl-actions { padding: 0; overflow: hidden; }
+.ctl-actions .dash-card-head { padding: 12px 14px; }
+/* A6: telefon — KPI 2 × 3 kompaktowo, lista działań jako karty (nr + akcja, co, status) */
+@media (max-width: 640px) {
+  .ctl-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .ctl-kpi { padding: var(--sp-2) var(--sp-3); }
+  .ctl-kpi-label { font-size: 11px; letter-spacing: 0.03em; }
+  .ctl-kpi-value { font-size: 22px; margin-top: 0; }
+  .ctl-kpi-sub { display: none; }
+  .ctl-actions table.grid, .ctl-actions table.grid tbody { display: block; }
+  .ctl-actions table.grid thead { display: none; }
+  .ctl-actions table.grid tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center;
+    gap: var(--sp-1) var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
+  .ctl-actions table.grid td { display: none; padding: 0; border: 0; background: transparent; }
+  .ctl-actions table.grid td:nth-child(1) { display: block; grid-column: 1; grid-row: 1; }
+  .ctl-actions table.grid td:nth-child(2) { display: block; grid-column: 2; grid-row: 1; font-weight: 600; }
+  .ctl-actions table.grid td:nth-child(3) { display: block; grid-column: 1 / 3; grid-row: 2; }
+  .ctl-actions table.grid td:nth-child(8) { display: block; grid-column: 1 / 3; grid-row: 3; }
+  .ctl-actions table.grid td:nth-child(9) { display: block; grid-column: 3; grid-row: 1 / span 3; }
+}
+/* C28: kolejka magazynu — rozwinięcie wiersza */
+.wh-table tr.wh-detail > td { background: var(--surface-2); padding: var(--sp-3); }
+@media (max-width: 640px) {
+  .wh-table, .wh-table tbody { display: block; }
+  .wh-table thead { display: none; }
+  .wh-table tr.clickable { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+    gap: var(--sp-1) var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--border); }
+  .wh-table tr.clickable > td { display: none; padding: 0; border: 0; background: transparent; }
+  .wh-table tr.clickable > td:nth-child(1) { display: block; grid-column: 1; grid-row: 1; }
+  .wh-table tr.clickable > td:nth-child(2) { display: block; grid-column: 1; grid-row: 2; }
+  .wh-table tr.clickable > td:nth-child(3) { display: block; grid-column: 2; grid-row: 2; font-size: var(--fs-sm); }
+  .wh-table tr.clickable > td:nth-child(7) { display: block; grid-column: 2; grid-row: 1; }
+  .wh-table tr.wh-detail, .wh-table tr.wh-detail > td { display: block; }
+}
+/* badge priorytetu P1/P2/P3 */
+.prio { display: inline-block; min-width: 26px; text-align: center; padding: 2px 7px;
+  border-radius: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #fff; }
+.prio-1 { background: var(--danger-fill); }  /* fill, nie --danger (= ink, jasny w dark → 2.3:1) */
+.prio-2 { background: #9a6a00; }   /* biały tekst ≥4.5:1 (było 2.4) */
+.prio-3 { background: #5f6b7a; }
+.prio-delay { color: var(--danger); font-weight: 600; font-family: var(--font-mono); font-size: 13px; }
+.dash-cards2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.mini-title { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.bar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.bar-row .bl { flex: 0 1 120px; min-width: 80px; font-size: 13px; color: var(--text); }
+.bar-track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bar-track i { display: block; height: 100%; border-radius: 999px; }
+.bar-val { width: 48px; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text); }
+.kv-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.kv-row:last-child { border-bottom: none; }
+.kv-label { font-size: 13px; color: var(--text); }
+.kv-val { font-family: var(--font-mono); font-size: 17px; font-weight: 700; color: var(--text); }
+.panel.attention { background: var(--danger-bg); border-color: var(--border); border-radius: 3px; box-shadow: none; }
+.attention-hd { display: flex; align-items: center; gap: 8px; }
+.attention-hd .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--danger); }
+.no-underline { text-decoration: none; }
+/* UX-018: link-akcja w kolorze marki (bez tego domyślny #00e / pomarańcz w dark) */
+a.link-like { color: var(--accent-ink); font-weight: 500; }
+
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs button { border: 1px solid var(--border); background: var(--soft); border-radius: 20px; padding: 6px 14px; color: var(--text); }  /* bez color: dark dziedziczył czarny tekst przycisku (1.5:1) */
+.tabs button.active { background: var(--accent); color: var(--text-on-fill); border-color: var(--accent); }
+
+/* ---- Agencja celna (CustomsPage) — reskin wg makiety „Agencja celna" ---- */
+.cs-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+/* .eyebrow — wspólny okruszek (B27: Specjalna troska miała klasę bez reguły) */
+.cs-eyebrow, .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.cs-title { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-xl); line-height: var(--lh-xl); color: var(--text); }
+.cs-sub { margin-top: 5px; font-size: 13px; line-height: 1.45; color: var(--muted); max-width: 720px; }
+/* baner grupy (wg ETA / agencji) — ciemny granat jak baner dnia w kolejce */
+.cs-board tr.cs-group td { padding: 0; border: none; }
+.cs-group-banner { display: flex; align-items: center; gap: 12px; padding: 7px 14px;
+  background: linear-gradient(120deg, #0d1f36, #14304f 55%, #1b3f68); color: #eaf2ff; }
+.cs-group-title { font-family: var(--font-mono); font-size: 14px; font-weight: 700; text-transform: capitalize; }
+.cs-group-note { font-size: 12px; color: #c8d6e8; }
+.cs-group-count { margin-left: auto; padding: 3px 11px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.13); border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 12px; font-weight: 600; }
+.cs-board tr.cs-group:hover td { background: none; }
+.cs-po { margin-top: 2px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.cs-agent-meta { margin-top: 2px; font-size: 11px; color: var(--muted); }
+.cs-term-cell { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 5px 8px; }
+
+@media (max-width: 1024px) { .hide-md { display: none; } }
+@media (max-width: 720px) {
+  .page { padding: 10px; }
+  table.grid { font-size: 12px; }
+  .hide-sm { display: none; }
+
+  /* Pasek filtrów/wyszukiwarki: sztywne min-width (260/180/190px) rozpychały go na
+     wąskim ekranie w 4-5 rzędów. Poniżej 720px pozwalamy elementom się skurczyć. */
+  .filters input[type="text"] { min-width: 0; width: 100%; }
+  .queue-onebar { flex-wrap: nowrap; overflow-x: auto; }
+  .queue-onebar .qsearch { flex: 1 1 100%; min-width: 0; }
+  .range-label { min-width: 0; flex: 1 1 auto; }
+  .range-stepper { flex: 1 1 100%; justify-content: space-between; }
+  .seg { flex-wrap: wrap; }
+}
+
+
+/* moduł reklamacyjny */
+.complaint-form { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 8px; }
+.cform-label { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.cform-label input, .cform-label textarea { width: 100%; margin-top: 3px; }
+.problem-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0 4px; }
+.problem-chips .chip {
+  border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  border-radius: 999px; padding: 6px 13px; font-size: 13px;
+}
+.problem-chips .chip.on { background: var(--warning-bg); border-color: var(--warning-ink); color: var(--warning-ink); font-weight: 600; }
+.photo-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.photo-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.photo-thumbs .thumb { position: relative; width: 92px; height: 92px; border-radius: 3px; overflow: hidden;
+  border: 1px solid var(--border); display: block; }
+.photo-thumbs .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.photo-thumbs .thumb button {
+  position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: var(--text-on-fill);
+  border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; line-height: 1;
+}
+.detail-grid-item { font-size: 14px; }
+.detail-grid-item b { display: block; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+td.over-limit { background: var(--danger-bg); color: var(--danger-ink); font-weight: 600; }
+
+@media (max-width: 720px) {
+  .photo-row .btn { flex: 1; }
+}
+/* strona wycen: lista zleceń + szczegóły */
+.quotes-page { display: grid; grid-template-columns: minmax(280px, 340px) 1fr; gap: 16px; align-items: start; }
+.quotes-list-head { padding: 12px 14px; font-weight: 700; border-bottom: 1px solid var(--border); }
+.quote-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  border-bottom: 1px solid var(--border); padding: 10px 14px; cursor: pointer;
+}
+.quote-item:hover { background: var(--soft); }
+.quote-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.quote-fwd-search { width: 100%; margin: 0 0 8px; }
+.quote-fwd-list { display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto; }
+.quote-fwd {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 3px; padding: 6px 12px; font-size: 14px;
+}
+.quote-fwd-name { flex: 0 0 auto; }
+.quote-fwd-mail { margin-left: auto; color: var(--muted); font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+.quote-fwd.disabled { cursor: not-allowed; color: var(--muted); background: var(--soft); }
+.quote-fwd.disabled .quote-fwd-mail { color: var(--danger); }
+.quote-fwd.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.quote-fwd.on .quote-fwd-mail { color: var(--accent-ink); }
+.quote-winner td { background: var(--success-bg); }
+.quote-won { color: var(--success-ink); font-weight: 700; }
+.quote-late { color: var(--danger); font-weight: 600; }
+.quote-form { background: var(--surface-2); }
+:root[data-theme='dark'] .quote-form { background: rgba(255,255,255,0.03); }
+@media (max-width: 900px) { .quotes-page { grid-template-columns: 1fr; } }
+/* wspólny nagłówek strony (PageHeader, UX-023/UX-024): tytuł + podtytuł, akcje po prawej */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: var(--sp-3) var(--sp-4); margin: var(--sp-2) 0 var(--sp-4); }
+.page-head h1 { margin: 0; }
+.page-head-sub { margin: var(--sp-1) 0 0; color: var(--text-muted); font-size: var(--fs-sm); }
+.page-head-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+/* /analityka: rezerwa wysokości panelu KPI na czas ładowania (CLS 0,19 → ~0) */
+.an-kpi.loading { min-height: 640px; }

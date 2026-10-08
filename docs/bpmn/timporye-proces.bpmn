@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Defs_timporye" targetNamespace="http://timporye.local/bpmn">
+
+  <bpmn:collaboration id="Collab_1">
+    <bpmn:participant id="Pool_TIMPORYE" name="TIMPORYE — cykl kontenera (od zamówienia do archiwum)" processRef="Proc_Kontener" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Proc_Kontener" isExecutable="false">
+    <bpmn:laneSet id="Lanes_1">
+      <bpmn:lane id="Lane_Zakupy" name="Zakupy (purchasing)">
+        <bpmn:flowNodeRef>Start_ETD</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_ImportETD</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Logistyka" name="Logistyka / Admin">
+        <bpmn:flowNodeRef>T_POkolejka</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ev_NumerArmatora</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Kontener</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_ZlecOdprawe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_PlanDostawy</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Tranzyt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_TranzytDostawa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Tranzyt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="System (tracking / alerty)">
+        <bpmn:flowNodeRef>T_Tracking</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ev_WTransporcie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ev_WPorcie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Spedycja" name="Spedycja (forwarder)">
+        <bpmn:flowNodeRef>T_ZlecenieTr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Realizacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Wykonane</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_PotwierdzDate</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Celna" name="Agencja celna (customs)">
+        <bpmn:flowNodeRef>T_Odprawa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_Rewizja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Rewizja</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Magazyn" name="Magazyn (warehouse)">
+        <bpmn:flowNodeRef>T_Rozladunek</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Dostarczony</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Archiwum</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Faza 0: przed numerem kontenera -->
+    <bpmn:startEvent id="Start_ETD" name="Zamówienie zakupowe w arkuszu ETD (SharePoint)">
+      <bpmn:outgoing>F01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="T_ImportETD" name="Import arkusza ETD — upsert PO po (spółka, order_no); filtr od daty">
+      <bpmn:incoming>F01</bpmn:incoming>
+      <bpmn:outgoing>F02</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_POkolejka" name="PO w kolejce jako wczesny etap — bez numeru kontenera">
+      <bpmn:incoming>F02</bpmn:incoming>
+      <bpmn:outgoing>F03</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Ev_NumerArmatora" name="Armator nadaje numer kontenera">
+      <bpmn:incoming>F03</bpmn:incoming>
+      <bpmn:outgoing>F04</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Numer" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_Kontener" name="Utworzenie kontenera (import kolejki / ręcznie) — walidacja ISO 6346, auto-link PO, status ZAPOWIEDZIANY">
+      <bpmn:incoming>F04</bpmn:incoming>
+      <bpmn:outgoing>F05</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Rozgałęzienie równoległe: tracking / spedycja / odprawa -->
+    <bpmn:parallelGateway id="G_Split" name="tory równoległe">
+      <bpmn:incoming>F05</bpmn:incoming>
+      <bpmn:outgoing>F06</bpmn:outgoing>
+      <bpmn:outgoing>F07</bpmn:outgoing>
+      <bpmn:outgoing>F08</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Tor: tracking -->
+    <bpmn:task id="T_Tracking" name="Śledzenie statków AIS + oś czasu kontenera (status ręcznie)">
+      <bpmn:incoming>F06</bpmn:incoming>
+      <bpmn:outgoing>F09</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Ev_WTransporcie" name="Wypłynięcie → W_TRANSPORCIE">
+      <bpmn:incoming>F09</bpmn:incoming>
+      <bpmn:outgoing>F10</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_WT" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Ev_WPorcie" name="Przybycie → W_PORCIE (start zegara demurrage)">
+      <bpmn:incoming>F10</bpmn:incoming>
+      <bpmn:outgoing>F11</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_WP" />
+    </bpmn:intermediateCatchEvent>
+
+    <!-- Tor: spedycja -->
+    <bpmn:task id="T_ZlecenieTr" name="Zlecenie transportowe: wystawione → zaakceptowane / odrzucone (RFQ: TransportJob + Quote)">
+      <bpmn:incoming>F07</bpmn:incoming>
+      <bpmn:outgoing>F12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_Realizacja" name="W realizacji: dane kierowcy (PATCH /driver → powiadomienia), pliki CMR, wiadomości">
+      <bpmn:incoming>F12</bpmn:incoming>
+      <bpmn:outgoing>F13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_Wykonane" name="Wykonane → potwierdzone przez logistykę">
+      <bpmn:incoming>F13</bpmn:incoming>
+      <bpmn:outgoing>F14</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Tor: odprawa celna -->
+    <bpmn:task id="T_ZlecOdprawe" name="Logistyka zleca odprawę agencji → ZLECONA (dokumenty: BRAK → ZAŁĄCZONE → WYSŁANE)">
+      <bpmn:incoming>F08</bpmn:incoming>
+      <bpmn:outgoing>F15</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_Odprawa" name="Agencja: DOKUMENTY_KOMPLETNE → DRAFT_WYSŁANY → DRAFT_POTWIERDZONY → ODPRAWIONY">
+      <bpmn:incoming>F15</bpmn:incoming>
+      <bpmn:incoming>F17</bpmn:incoming>
+      <bpmn:outgoing>F16</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="G_Rewizja" name="rewizja?">
+      <bpmn:incoming>F16</bpmn:incoming>
+      <bpmn:outgoing>F18</bpmn:outgoing>
+      <bpmn:outgoing>F19</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="T_Rewizja" name="REWIZJA — kontener wstrzymany (data + notatka); alert gdy trwa &gt; CUSTOMS_ALERT_DAYS">
+      <bpmn:incoming>F18</bpmn:incoming>
+      <bpmn:outgoing>F17</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Złączenie torów -->
+    <bpmn:parallelGateway id="G_Join" name="przybył + odprawiony + transport gotowy">
+      <bpmn:incoming>F11</bpmn:incoming>
+      <bpmn:incoming>F14</bpmn:incoming>
+      <bpmn:incoming>F19</bpmn:incoming>
+      <bpmn:outgoing>F20</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Awizacja i dostawa -->
+    <bpmn:task id="T_PlanDostawy" name="Plan dostawy: propozycja daty (ETA+4) → wysłanie do spedycji (PROPOZYCJA → WYSŁANE)">
+      <bpmn:incoming>F20</bpmn:incoming>
+      <bpmn:outgoing>F21</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_PotwierdzDate" name="Potwierdzenie daty: portal spedycji / publiczny formularz awizacji → AWIZOWANY (limit dzienny magazynu, kalendarz PL/PT)">
+      <bpmn:incoming>F21</bpmn:incoming>
+      <bpmn:outgoing>F22</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="G_Tranzyt" name="tranzyt do klienta?">
+      <bpmn:incoming>F22</bpmn:incoming>
+      <bpmn:outgoing>F23</bpmn:outgoing>
+      <bpmn:outgoing>F24</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Gałąź tranzytowa -->
+    <bpmn:task id="T_TranzytDostawa" name="Tranzyt: W_DOSTAWIE → dostawa do klienta; DOSTARCZONY potwierdza logistyka ręcznie (magazyn poza pętlą)">
+      <bpmn:incoming>F23</bpmn:incoming>
+      <bpmn:outgoing>F25</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Tranzyt" name="ZREALIZOWANY (tranzyt)">
+      <bpmn:incoming>F25</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Gałąź magazynowa -->
+    <bpmn:task id="T_Rozladunek" name="W_DOSTAWIE → rozładunek w magazynie (karta rozładunku)">
+      <bpmn:incoming>F24</bpmn:incoming>
+      <bpmn:outgoing>F26</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="T_Dostarczony" name="Magazyn potwierdza DOSTARCZONY → ZREALIZOWANY (tylko magazyn może ustawić)">
+      <bpmn:incoming>F26</bpmn:incoming>
+      <bpmn:outgoing>F27</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Archiwum" name="Archiwum (+ ewentualna reklamacja)">
+      <bpmn:incoming>F27</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Adnotacje: alerty automatyczne -->
+    <bpmn:textAnnotation id="TA_Opozniony">
+      <bpmn:text>Flaga OPÓŹNIONY (automat): minęło ETA bez przybycia / minęła awizacja bez dostawy</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:textAnnotation id="TA_Demurrage">
+      <bpmn:text>Alert DEMURRAGE: przybycie/ETA + dni wolne</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:textAnnotation id="TA_Audyt">
+      <bpmn:text>Każda zmiana pola → audyt (kto, kiedy, stara/nowa wartość); powiadomienia in-app / e-mail / Teams</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As1" sourceRef="Ev_WPorcie" targetRef="TA_Demurrage" />
+    <bpmn:association id="As2" sourceRef="Ev_WTransporcie" targetRef="TA_Opozniony" />
+    <bpmn:association id="As3" sourceRef="T_Kontener" targetRef="TA_Audyt" />
+
+    <bpmn:sequenceFlow id="F01" sourceRef="Start_ETD" targetRef="T_ImportETD" />
+    <bpmn:sequenceFlow id="F02" sourceRef="T_ImportETD" targetRef="T_POkolejka" />
+    <bpmn:sequenceFlow id="F03" sourceRef="T_POkolejka" targetRef="Ev_NumerArmatora" />
+    <bpmn:sequenceFlow id="F04" sourceRef="Ev_NumerArmatora" targetRef="T_Kontener" />
+    <bpmn:sequenceFlow id="F05" sourceRef="T_Kontener" targetRef="G_Split" />
+    <bpmn:sequenceFlow id="F06" sourceRef="G_Split" targetRef="T_Tracking" />
+    <bpmn:sequenceFlow id="F07" sourceRef="G_Split" targetRef="T_ZlecenieTr" />
+    <bpmn:sequenceFlow id="F08" sourceRef="G_Split" targetRef="T_ZlecOdprawe" />
+    <bpmn:sequenceFlow id="F09" sourceRef="T_Tracking" targetRef="Ev_WTransporcie" />
+    <bpmn:sequenceFlow id="F10" sourceRef="Ev_WTransporcie" targetRef="Ev_WPorcie" />
+    <bpmn:sequenceFlow id="F11" sourceRef="Ev_WPorcie" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="F12" sourceRef="T_ZlecenieTr" targetRef="T_Realizacja" />
+    <bpmn:sequenceFlow id="F13" sourceRef="T_Realizacja" targetRef="T_Wykonane" />
+    <bpmn:sequenceFlow id="F14" sourceRef="T_Wykonane" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="F15" sourceRef="T_ZlecOdprawe" targetRef="T_Odprawa" />
+    <bpmn:sequenceFlow id="F16" sourceRef="T_Odprawa" targetRef="G_Rewizja" />
+    <bpmn:sequenceFlow id="F17" name="po rewizji" sourceRef="T_Rewizja" targetRef="T_Odprawa" />
+    <bpmn:sequenceFlow id="F18" name="tak" sourceRef="G_Rewizja" targetRef="T_Rewizja" />
+    <bpmn:sequenceFlow id="F19" name="nie — ODPRAWIONY" sourceRef="G_Rewizja" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="F20" sourceRef="G_Join" targetRef="T_PlanDostawy" />
+    <bpmn:sequenceFlow id="F21" sourceRef="T_PlanDostawy" targetRef="T_PotwierdzDate" />
+    <bpmn:sequenceFlow id="F22" sourceRef="T_PotwierdzDate" targetRef="G_Tranzyt" />
+    <bpmn:sequenceFlow id="F23" name="tak (is_transit)" sourceRef="G_Tranzyt" targetRef="T_TranzytDostawa" />
+    <bpmn:sequenceFlow id="F24" name="nie — do magazynu" sourceRef="G_Tranzyt" targetRef="T_Rozladunek" />
+    <bpmn:sequenceFlow id="F25" sourceRef="T_TranzytDostawa" targetRef="End_Tranzyt" />
+    <bpmn:sequenceFlow id="F26" sourceRef="T_Rozladunek" targetRef="T_Dostarczony" />
+    <bpmn:sequenceFlow id="F27" sourceRef="T_Dostarczony" targetRef="End_Archiwum" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="Diag_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Collab_1">
+      <bpmndi:BPMNShape id="Sh_Pool" bpmnElement="Pool_TIMPORYE" isHorizontal="true">
+        <dc:Bounds x="120" y="60" width="2640" height="990" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LZak" bpmnElement="Lane_Zakupy" isHorizontal="true">
+        <dc:Bounds x="150" y="60" width="2610" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LLog" bpmnElement="Lane_Logistyka" isHorizontal="true">
+        <dc:Bounds x="150" y="200" width="2610" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LSys" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="150" y="420" width="2610" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LSpe" bpmnElement="Lane_Spedycja" isHorizontal="true">
+        <dc:Bounds x="150" y="560" width="2610" height="160" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LCel" bpmnElement="Lane_Celna" isHorizontal="true">
+        <dc:Bounds x="150" y="720" width="2610" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_LMag" bpmnElement="Lane_Magazyn" isHorizontal="true">
+        <dc:Bounds x="150" y="890" width="2610" height="160" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_Start" bpmnElement="Start_ETD">
+        <dc:Bounds x="202" y="112" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_ImportETD" bpmnElement="T_ImportETD">
+        <dc:Bounds x="290" y="90" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_POkolejka" bpmnElement="T_POkolejka">
+        <dc:Bounds x="290" y="260" width="130" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_Ev_Numer" bpmnElement="Ev_NumerArmatora">
+        <dc:Bounds x="472" y="282" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Kontener" bpmnElement="T_Kontener">
+        <dc:Bounds x="560" y="260" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_G_Split" bpmnElement="G_Split">
+        <dc:Bounds x="765" y="275" width="50" height="50" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_T_Tracking" bpmnElement="T_Tracking">
+        <dc:Bounds x="880" y="450" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_Ev_WT" bpmnElement="Ev_WTransporcie">
+        <dc:Bounds x="1092" y="472" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_Ev_WP" bpmnElement="Ev_WPorcie">
+        <dc:Bounds x="1222" y="472" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_T_ZlecTr" bpmnElement="T_ZlecenieTr">
+        <dc:Bounds x="880" y="600" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Real" bpmnElement="T_Realizacja">
+        <dc:Bounds x="1080" y="600" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Wyk" bpmnElement="T_Wykonane">
+        <dc:Bounds x="1290" y="600" width="130" height="80" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_T_ZlecOd" bpmnElement="T_ZlecOdprawe">
+        <dc:Bounds x="880" y="280" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Odprawa" bpmnElement="T_Odprawa">
+        <dc:Bounds x="1080" y="760" width="160" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_G_Rewizja" bpmnElement="G_Rewizja" isMarkerVisible="true">
+        <dc:Bounds x="1300" y="780" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Rewizja" bpmnElement="T_Rewizja">
+        <dc:Bounds x="1410" y="760" width="150" height="90" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_G_Join" bpmnElement="G_Join">
+        <dc:Bounds x="1545" y="275" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Plan" bpmnElement="T_PlanDostawy">
+        <dc:Bounds x="1660" y="260" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Potw" bpmnElement="T_PotwierdzDate">
+        <dc:Bounds x="1870" y="600" width="170" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_G_Tranzyt" bpmnElement="G_Tranzyt" isMarkerVisible="true">
+        <dc:Bounds x="2105" y="275" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Tranzyt" bpmnElement="T_TranzytDostawa">
+        <dc:Bounds x="2220" y="240" width="160" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_End_Tranzyt" bpmnElement="End_Tranzyt">
+        <dc:Bounds x="2450" y="267" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_T_Rozl" bpmnElement="T_Rozladunek">
+        <dc:Bounds x="2220" y="920" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_T_Dost" bpmnElement="T_Dostarczony">
+        <dc:Bounds x="2430" y="920" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_End_Arch" bpmnElement="End_Archiwum">
+        <dc:Bounds x="2650" y="942" width="36" height="36" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Sh_TA_Op" bpmnElement="TA_Opozniony">
+        <dc:Bounds x="1000" y="382" width="220" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_TA_Dem" bpmnElement="TA_Demurrage">
+        <dc:Bounds x="1300" y="440" width="200" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sh_TA_Aud" bpmnElement="TA_Audyt">
+        <dc:Bounds x="480" y="365" width="250" height="48" />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="E_F01" bpmnElement="F01">
+        <di:waypoint x="238" y="130" /><di:waypoint x="290" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F02" bpmnElement="F02">
+        <di:waypoint x="355" y="170" /><di:waypoint x="355" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F03" bpmnElement="F03">
+        <di:waypoint x="420" y="300" /><di:waypoint x="472" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F04" bpmnElement="F04">
+        <di:waypoint x="508" y="300" /><di:waypoint x="560" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F05" bpmnElement="F05">
+        <di:waypoint x="710" y="300" /><di:waypoint x="765" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F06" bpmnElement="F06">
+        <di:waypoint x="790" y="325" /><di:waypoint x="790" y="490" /><di:waypoint x="880" y="490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F07" bpmnElement="F07">
+        <di:waypoint x="790" y="325" /><di:waypoint x="790" y="640" /><di:waypoint x="880" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F08" bpmnElement="F08">
+        <di:waypoint x="815" y="300" /><di:waypoint x="880" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F09" bpmnElement="F09">
+        <di:waypoint x="1020" y="490" /><di:waypoint x="1092" y="490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F10" bpmnElement="F10">
+        <di:waypoint x="1128" y="490" /><di:waypoint x="1222" y="490" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F11" bpmnElement="F11">
+        <di:waypoint x="1258" y="490" /><di:waypoint x="1570" y="490" /><di:waypoint x="1570" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F12" bpmnElement="F12">
+        <di:waypoint x="1020" y="640" /><di:waypoint x="1080" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F13" bpmnElement="F13">
+        <di:waypoint x="1230" y="640" /><di:waypoint x="1290" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F14" bpmnElement="F14">
+        <di:waypoint x="1420" y="640" /><di:waypoint x="1530" y="640" /><di:waypoint x="1530" y="310" /><di:waypoint x="1545" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F15" bpmnElement="F15">
+        <di:waypoint x="955" y="360" /><di:waypoint x="955" y="805" /><di:waypoint x="1080" y="805" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F16" bpmnElement="F16">
+        <di:waypoint x="1240" y="805" /><di:waypoint x="1300" y="805" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F17" bpmnElement="F17">
+        <di:waypoint x="1485" y="760" /><di:waypoint x="1485" y="735" /><di:waypoint x="1160" y="735" /><di:waypoint x="1160" y="760" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F18" bpmnElement="F18">
+        <di:waypoint x="1350" y="805" /><di:waypoint x="1410" y="805" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F19" bpmnElement="F19">
+        <di:waypoint x="1325" y="855" /><di:waypoint x="1325" y="875" /><di:waypoint x="1600" y="875" /><di:waypoint x="1600" y="315" /><di:waypoint x="1595" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F20" bpmnElement="F20">
+        <di:waypoint x="1595" y="300" /><di:waypoint x="1660" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F21" bpmnElement="F21">
+        <di:waypoint x="1810" y="330" /><di:waypoint x="1955" y="330" /><di:waypoint x="1955" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F22" bpmnElement="F22">
+        <di:waypoint x="2040" y="640" /><di:waypoint x="2130" y="640" /><di:waypoint x="2130" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F23" bpmnElement="F23">
+        <di:waypoint x="2155" y="300" /><di:waypoint x="2220" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F24" bpmnElement="F24">
+        <di:waypoint x="2130" y="325" /><di:waypoint x="2130" y="960" /><di:waypoint x="2220" y="960" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F25" bpmnElement="F25">
+        <di:waypoint x="2380" y="285" /><di:waypoint x="2450" y="285" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F26" bpmnElement="F26">
+        <di:waypoint x="2370" y="960" /><di:waypoint x="2430" y="960" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_F27" bpmnElement="F27">
+        <di:waypoint x="2580" y="960" /><di:waypoint x="2650" y="960" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="E_As1" bpmnElement="As1">
+        <di:waypoint x="1240" y="472" /><di:waypoint x="1320" y="458" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_As2" bpmnElement="As2">
+        <di:waypoint x="1110" y="472" /><di:waypoint x="1100" y="422" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E_As3" bpmnElement="As3">
+        <di:waypoint x="620" y="340" /><di:waypoint x="600" y="365" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

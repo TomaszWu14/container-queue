@@ -1,0 +1,54 @@
+/* kolejka: pasek firm, siatka Acme, menu magazynu, komórki — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+.logo-mark { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
+.logo-mark.chip, .logo-full.chip {
+  background: #fff; border-radius: 2px; padding: 3px 4px;
+  border: 1px solid #dde3ec;
+}
+.logo-mark.cobalt { background: #2b0f2e; border-radius: 3px; align-items: center;
+  justify-content: center; display: inline-flex; flex-direction: row; }
+.logo-caption { font-size: 8px; font-weight: 800; letter-spacing: 0.08em; color: inherit; }
+.logo-full { display: inline-flex; flex-direction: column; align-items: center; }
+.logo-caption.big { font-size: 11px; font-weight: 800; letter-spacing: 0.22em; color: #101b33; }
+.login-logos {
+  display: flex; gap: 18px; align-items: center; justify-content: center;
+  margin-top: 18px; opacity: 0.95;
+}
+
+/* zmiana magazynu tylko na tej komórce (prawy przycisk) */
+/* Rozciągnięty na całą wysokość wiersza, by prawy klik miał pewny cel także gdy magazyn
+   jest pusty (siatka kafelka centruje elementy, więc pusty span zapadłby się do ~0 px). */
+.wh-cell { cursor: context-menu; border-radius: 3px; padding: 1px 3px; margin: -1px -3px;
+  align-self: stretch; display: flex; align-items: center; min-height: 20px; }
+.wh-empty { color: var(--muted); font-weight: 700; }
+.wh-cell:hover .wh-empty { color: var(--muted-strong); }
+.wh-cell:hover { background: rgba(11, 95, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(11, 95, 255, 0.35); }
+
+/* menu kontekstowe zmiany magazynu rozładunku (prawy przycisk na kafelku) */
+.ctx-menu {
+  /* position:fixed + współrzędne z JS: na wąskim ekranie menu potrafiło wyjechać poza
+     viewport. max-width trzyma je w kadrze, min-width ustępuje na bardzo wąskich. */
+  position: fixed; z-index: 200; min-width: min(190px, calc(100vw - 24px));
+  max-width: calc(100vw - 16px);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 14px 32px -8px rgba(16, 38, 63, 0.4); padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.ctx-menu .ctx-title {
+  font-size: 12px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); padding: 4px 8px 2px;
+}
+.ctx-menu .ctx-current { font-size: 13px; color: var(--text); padding: 0 8px 6px;
+  border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.ctx-menu button {
+  display: flex; align-items: center; gap: 8px;
+  text-align: left; border: none; background: none; cursor: pointer;
+  padding: 8px 10px; border-radius: 3px; font-weight: 600; font-size: 14px;
+  color: var(--text); transition: background 0.12s ease;
+}
+.ctx-menu button:hover { background: var(--accent-soft); }
+.ctx-menu button.active { color: var(--accent-ink); }
+.ctx-menu .ctx-error { color: var(--danger, #c0392b); font-size: 12px; padding: 4px 8px; }
+.tile .pre { white-space: pre-wrap; font-size: 15px; }
+
+.muted { color: var(--muted); }
+

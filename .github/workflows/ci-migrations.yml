@@ -1,0 +1,70 @@
+name: CI — migracje
+
+# Migracje od zera na prawdziwym PostgreSQL 16 (audyt DB-004 / TEST-001 / TEST-002):
+# pytest jedzie na SQLite z Base.metadata.create_all, więc bez tego joba nikt nie sprawdza,
+# że `alembic upgrade head` na pustej bazie przechodzi i daje schemat zgodny z modelami.
+#  1. alembic upgrade head na pustej bazie,
+#  2. scripts/db_enum_drift.py — wartości natywnych enumów modeli = typy w bazie (0 rozjazdów),
+#  3. scripts/db_drift.py — modele vs schemat; znany dryf w db_drift_baseline.txt (tylko maleje),
+#  4. downgrade -1 && upgrade head — ostatnia migracja da się cofnąć i nałożyć ponownie.
+# Odpala się tylko, gdy PR rusza migracje/modele (filtr paths — lustro w automerge.yml REQUIRED).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - 'backend/migrations/**'
+      - 'backend/app/models/**'
+      - 'backend/app/database.py'
+      - 'backend/scripts/db_*'
+      - '.github/workflows/ci-migrations.yml'
+  workflow_dispatch:
+
+concurrency:
+  # draft w osobnej grupie — nie anuluje biegu „ready” (wyścig draft→ready, PR #796; security.yml)
+  group: ci-migrations-${{ github.ref }}-${{ github.event.pull_request.draft }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    # draft: inna nazwa checku — pominięty bieg nie przesłoni wyniku w automerge (REQUIRED)
+    name: ${{ github.event.pull_request.draft && 'Backend — migracje (PostgreSQL) (draft — pominięty)' || 'Backend — migracje (PostgreSQL)' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # pomijaj drafty; workflow_dispatch nie ma pull_request → wyrażenie = true (rusza)
+    if: ${{ !github.event.pull_request.draft }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: timporye
+          POSTGRES_PASSWORD: timporye   # jednorazowa baza CI, nie sekret
+          POSTGRES_DB: timporye_ci
+        # losowy port hosta — runner self-hosted może mieć własny Postgres na 5432
+        ports: ['5432/tcp']
+        options: >-
+          --health-cmd "pg_isready -U timporye -d timporye_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: DATABASE_URL usługi postgres
+        run: echo "DATABASE_URL=postgresql+psycopg2://timporye:timporye@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/timporye_ci" >> "$GITHUB_ENV"
+      - name: alembic upgrade head (pusta baza)
+        run: python -m alembic upgrade head
+      - name: Dryf enumów (0 rozjazdów)
+        run: python scripts/db_enum_drift.py
+      - name: Dryf schematu vs baseline
+        run: python scripts/db_drift.py
+      - name: Ostatnia migracja — downgrade -1 i ponownie upgrade head
+        run: python -m alembic downgrade -1 && python -m alembic upgrade head

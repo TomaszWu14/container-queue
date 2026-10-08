@@ -1,0 +1,18 @@
+/* Kolejność kolumn kolejki: przeciąganie nagłówków (useHeaderDrag) + ↑/↓ w menu „Widok".
+   Tylko tokeny — jasny i ciemny motyw bez osobnych reguł. */
+.kq-table th[draggable='true']:not(.sortable) { cursor: grab; }
+.kq-table th.kq-dragging { opacity: .5; }
+/* wskaźnik miejsca upuszczenia: kreska po stronie, po której wyląduje kolumna */
+.kq-table th.kq-drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+.kq-table th.kq-drop-after { box-shadow: inset -3px 0 0 var(--accent); }
+
+.kq-col-row { display: flex; align-items: center; gap: 2px; }
+.kq-col-row label { flex: 1; min-width: 0; }
+.kq-col-step {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 22px; height: 22px; padding: 0; border: none; border-radius: 4px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.kq-col-step:hover:not(:disabled) { background: var(--soft); color: var(--text); }
+.kq-col-step:disabled { opacity: .3; cursor: default; }
+.kq-col-hint { margin: 0; font-size: 11px; color: var(--muted); }

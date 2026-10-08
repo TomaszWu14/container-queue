@@ -1,0 +1,339 @@
+/* boczna nawigacja / topnav, logowanie, komunikaty routingu — wydzielone ze styles.css; kolejność importu w main.tsx = kaskada */
+/* ============================================================
+   Boczna nawigacja (ciemny sidebar) — zastępuje górny .topnav
+   ============================================================ */
+.app-shell { display: block; min-height: 100vh; }
+.app-main { min-width: 0; }
+
+/* ============================================================
+   Górny pasek nawigacji (rozwijane sekcje) — kolejka na cały ekran
+   ============================================================ */
+.topnav {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  color: #c2d1e4; flex-wrap: wrap;
+  background: var(--chrome);
+  border-bottom: 2px solid var(--accent);
+}
+.topnav a { text-decoration: none; }
+.tn-brand { display: flex; align-items: center; gap: 9px; padding-right: 8px; flex-shrink: 0; }
+.tn-brand .sb-logo { width: 34px; height: 34px; }
+
+.tn-menu { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+
+/* pojedynczy link (Kolejka, Administracja) i przycisk sekcji — wspólny wygląd */
+.tn-link, .tn-group-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 12px; border-radius: 3px; border: none; cursor: pointer;
+  color: #c2d1e4; background: transparent; font: inherit; font-size: 14px; font-weight: 600;
+  transition: background 0.13s, color 0.13s;
+}
+.tn-link:hover, .tn-group-btn:hover,
+.tn-group.open .tn-group-btn { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.tn-link.active { background: rgba(255, 255, 255, 0.07); color: #fff; box-shadow: inset 0 -2px 0 var(--accent); }
+.tn-primary { background: rgba(255, 255, 255, 0.06); }
+.tn-caret { flex-shrink: 0; }
+.tn-link .nav-ico, .tn-group-btn .nav-ico { opacity: 0.9; }
+
+/* sekcja rozwijana */
+.tn-group { position: relative; }
+.tn-drop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 70;
+  min-width: 210px; padding: 6px; display: none; flex-direction: column; gap: 2px;
+  background: #16273c; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 3px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+}
+/* otwierane klikiem (JS: .open), nie hover — jedno menu naraz, działa na dotyku */
+.tn-group.open .tn-drop { display: flex; }
+.tn-drop-link {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 3px;
+  color: #c8d6e8; font-size: 14px; font-weight: 500; transition: background 0.12s, color 0.12s;
+}
+.tn-drop-link:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.tn-drop-link.active { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+/* prawa strona: firmy, status, zegar, dzwonek, user, język, wyloguj */
+.tn-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tn-status { display: inline-flex; align-items: center; gap: 6px; }
+.tn-online { font-size: 12px; font-weight: 700; color: #7ee0a8; letter-spacing: 0.04em; }
+.tn-user { display: flex; align-items: center; gap: 8px; }
+.tn-user .sb-user-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.tn-user .sb-user-txt b { color: #fff; font-size: 13px; }
+.tn-user .sb-user-txt small { color: #8fa6c4; font-size: 11px; }
+.topnav .tn-logout { width: auto; padding: 7px 12px; flex: 0 0 auto; }
+
+/* wąski ekran: pasek zawija się, prawa strona schodzi do nowej linii */
+@media (max-width: 900px) {
+  .tn-right { margin-left: 0; width: 100%; order: 3; }
+  .tn-user .sb-user-txt small { display: none; }
+}
+
+.sidebar {
+  width: 252px; flex-shrink: 0; align-self: stretch;
+  position: sticky; top: 0; height: 100vh; z-index: 60;
+  display: flex; flex-direction: column; gap: 14px; padding: 16px 14px;
+  color: #c2d1e4;
+  background: linear-gradient(185deg, #1f3d63 0%, #16293f 48%, #101f34 100%);
+  box-shadow: 4px 0 22px -12px rgba(0, 0, 0, 0.6);
+  overflow-y: auto;
+}
+.sidebar a { text-decoration: none; }
+
+/* marka */
+.sb-brand { display: flex; align-items: center; gap: 11px; padding: 2px 4px 4px; }
+.sb-logo {
+  width: 42px; height: 42px; border-radius: 3px; color: #fff; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, #2b6cff 0%, #57a0ff 100%);
+  box-shadow: 0 6px 14px -6px rgba(43, 108, 255, 0.7);
+}
+.sb-brand-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.sb-brand-txt b { color: #fff; font-size: 17px; font-weight: 800; letter-spacing: 0.5px; }
+.sb-brand-txt small {
+  color: #6f9bd0; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+
+/* karta statusu */
+.sb-status {
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px; padding: 10px 12px;
+}
+.sb-status-top { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.sb-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.2); }
+.sb-status-lbl { color: #d7e3f2; font-weight: 600; }
+.sb-online { margin-left: auto; color: #34d399; font-size: 12px; font-weight: 700; }
+.sb-status-sub { color: #8fa9c8; font-size: 12px; margin-top: 4px; }
+
+/* menu */
+/* flex:0 0 auto — menu zachowuje pełną wysokość swojej treści. Wcześniej flex:1 + min-height:0
+   pozwalało mu się skurczyć poniżej wysokości linków, przez co przy niskim oknie linki
+   „wylewały się" na sekcję firm i stopkę (widoki nachodziły na siebie). Teraz cała treść
+   sidebara rośnie ponad 100vh i włącza się jego własny overflow-y:auto (przewijanie). */
+.sb-nav { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
+.sb-link {
+  display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 3px;
+  color: #b6c7dd; font-size: 14px; font-weight: 600; transition: background 0.13s, color 0.13s;
+}
+.sb-link .nav-ico { opacity: 0.85; flex-shrink: 0; }
+.sb-link span { flex: 1; }
+.sb-link:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+.sb-link.active {
+  color: #fff;
+  background: linear-gradient(95deg, #f97316 0%, #fb5476 100%);
+  box-shadow: 0 8px 18px -8px rgba(249, 88, 100, 0.65);
+}
+.sb-link.active .nav-ico { opacity: 1; }
+.sb-badge {
+  flex: none; background: rgba(255, 255, 255, 0.16); color: #fff;
+  border-radius: 2px; padding: 1px 9px; font-size: 12px; font-weight: 700; font-family: var(--font-mono);
+}
+.sb-link.active .sb-badge { background: rgba(255, 255, 255, 0.28); }
+
+/* sekcja firm */
+.sb-firms { display: flex; flex-direction: column; gap: 8px; }
+.sb-section {
+  color: #6f8db1; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; padding: 0 4px;
+}
+/* wszystkie firmy w jednym pasku — równe kafelki dzielące szerokość */
+.sb-firm-row { display: flex; gap: 6px; flex-wrap: nowrap; align-items: stretch; }
+/* pigułki tekstowe zamiast logo (loga źle się renderowały) — same skróty firm */
+.sb-firm {
+  flex: 1 1 0; min-width: 0;
+  border-radius: 2px; background: rgba(255, 255, 255, 0.06);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  padding: 6px 4px; color: #dbe6f4; font-size: 12px; font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.13s, transform 0.1s;
+}
+.sb-firm:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+/* stopka: zegar + dzwonek + użytkownik */
+.sb-foot { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.sb-clockrow { display: flex; align-items: center; gap: 8px; }
+.sb-clockrow .worldclock { flex: 1 1 0; min-width: 0; padding: 6px 10px; overflow: hidden; }
+/* w wąskim sidebarze chowamy datę i zwężamy siatkę zegara, by nic się nie wysypywało poza ramkę.
+   minmax(0,1fr) pozwala kolumnie etykiety zwężać się poniżej treści (bez tego napis wypycha zegar). */
+.sb-clockrow .worldclock .wc-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.sb-clockrow .worldclock .wc-label { overflow: hidden; text-overflow: ellipsis; }
+.sb-clockrow .worldclock .wc-time { font-size: 15px; }
+.sb-clockrow .worldclock .wc-date { display: none; }
+.sb-clockrow > div:last-child { flex-shrink: 0; }
+.sb-clockrow > div:last-child > button {
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #dbe6f4; border-radius: 3px; width: 40px; height: 40px; font-size: 17px;
+}
+.sb-userbar { display: flex; align-items: center; gap: 9px; }
+.sb-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 14px;
+  background: linear-gradient(135deg, #2b6cff, #7aa9ff);
+}
+.sb-user-txt { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; flex: 1; }
+.sb-user-txt b { color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-txt small { color: #7f9bbd; font-size: 12px; }
+.sb-lang {
+  background: #16273c; border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #eaf2ff; border-radius: 3px; padding: 6px 8px; font-size: 13px;
+  min-height: 32px; cursor: pointer;
+}
+/* rozwijana lista języka: jawne kolory, żeby wszystkie opcje były czytelne (nie tylko po najechaniu) */
+.sb-lang option { background: #16273c; color: #eaf2ff; }
+.sb-logout {
+  width: 100%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #dbe6f4; border-radius: 3px; padding: 9px; font-weight: 600; font-size: 14px;
+  transition: background 0.13s;
+}
+.sb-logout:hover { background: rgba(249, 88, 100, 0.22); border-color: rgba(249, 88, 100, 0.4); color: #fff; }
+
+/* responsywnie: wąskie ekrany → sidebar jako górny pasek */
+@media (max-width: 860px) {
+  .app-shell { flex-direction: column; }
+  .sidebar {
+    width: 100%; height: auto; position: static; flex-direction: row;
+    flex-wrap: wrap; align-items: center; gap: 10px;
+  }
+  .sb-nav { flex-direction: row; flex-wrap: wrap; flex: 1 1 100%; order: 3; }
+  .sb-status, .sb-firms { display: none; }
+  /* stopka może się zawijać — na wąskich ekranach nic nie jest wypychane poza pasek */
+  .sb-foot {
+    flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+    border-top: none; padding-top: 0; order: 2; flex: 1 1 auto; min-width: 0;
+  }
+  .sb-userbar { flex: 0 1 auto; min-width: 0; }
+  .sb-logout { width: auto; }
+}
+
+/* bardzo wąskie telefony: język + użytkownik nie mieszczą się w jednej linii z zegarem
+   — pozwól userbarowi zająć całą szerokość, żeby select „PL" nie był przycięty */
+@media (max-width: 480px) {
+  .sb-foot { flex-direction: column; align-items: stretch; }
+  .sb-clockrow, .sb-userbar { width: 100%; }
+  .sb-userbar { justify-content: flex-start; }
+  .sb-user-txt { flex: 1 1 auto; }
+  .sb-lang { flex: 0 0 auto; }
+  .sb-logout { width: 100%; }
+}
+
+/* znacznik „ostatnia aktualizacja systemu" w stopce sidebara */
+.sb-build {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-align: center;
+}
+.sb-build-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+.sb-build-time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ekran logowania: animowana scena portu (tło) + karta logowania na wierzchu */
+.login-scene {
+  position: relative; min-height: 100vh; min-height: 100dvh;
+  overflow: hidden; display: flex; justify-content: center;
+}
+.login-scene-card {
+  position: relative; z-index: 2;
+  margin-top: clamp(24px, 7vh, 84px); padding: 0 16px;
+}
+
+/* ekran logowania: animacja startowa (placeholder do czasu dostarczenia właściwej) */
+.login-anim { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.login-anim-track { display: flex; gap: 8px; }
+.login-anim-box {
+  width: 26px; height: 20px; border-radius: 4px;
+  background: linear-gradient(135deg, #e0603a, #f0894f);
+  box-shadow: 0 3px 8px -3px rgba(224, 96, 58, 0.6);
+  animation: loginbox 1.4s ease-in-out infinite;
+}
+.login-anim-box:nth-child(2) { animation-delay: 0.18s; }
+.login-anim-box:nth-child(3) { animation-delay: 0.36s; }
+@keyframes loginbox {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(-8px); opacity: 1; }
+}
+.login-anim-brand { font-size: 11px; font-weight: 800; letter-spacing: 0.22em; color: #7f9dbd; }
+
+/* wskaźnik „online" w liście użytkowników */
+.online-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  margin-right: 7px; background: #c3cedd; vertical-align: middle;
+}
+.online-dot.on { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18); }
+
+/* #16 — tabela z wiodącym wskaźnikiem (kropka online) w 1. kolumnie: wskaźnik nie może
+   spychać tekstu, bo wtedy dane nie licują z nagłówkiem. Indent 1. kolumny NA NAGŁÓWKU
+   i DANYCH równo, a wskaźnik pozycjonowany absolutnie w tym indencie. */
+table.grid-status th:first-child,
+table.grid-status td:first-child { padding-left: 26px; }
+table.grid-status td:first-child { position: relative; }
+table.grid-status .online-dot {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); margin: 0;
+}
+
+/* import: lista błędnych numerów kontenerów */
+.import-invalid { margin: 4px 0 8px; }
+.import-invalid summary { cursor: pointer; font-size: 14px; color: #b42318; font-weight: 600; }
+.import-invalid-nums { margin-top: 6px; max-height: 120px; overflow: auto; font-size: 12px;
+  color: var(--muted); background: #fef3f2; border: 1px solid #fecdca; border-radius: 3px; padding: 8px 10px; }
+
+/* widoki komunikatów routingu (404 / 403) — wyśrodkowane, z linkiem powrotnym */
+.route-msg { max-width: 560px; margin: 12vh auto 0; text-align: center; }
+.route-msg h1 { font-size: 22px; margin: 0 0 8px; }
+.route-msg p { color: var(--muted); margin: 0 0 18px; }
+
+
+/* design system: przyciski ikonowe w ciemnym topbarze (Wiedza, powiadomienia) — przezroczyste
+   jak reszta nawigacji zamiast białych prostokątów (audyt UI A11/C35) */
+.tn-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 36px; height: 36px; padding: 0 8px; border: 0; border-radius: var(--r-sm);
+  background: transparent; color: var(--chrome-text); cursor: pointer; font: inherit;
+  transition: background var(--dur-fast) var(--ease);
+}
+.tn-icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.tn-icon-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tn-icon-btn b { font-size: 12px; font-variant-numeric: tabular-nums; }
+@media (pointer: coarse) { .tn-icon-btn { min-width: var(--tap); height: var(--tap); } }
+
+/* ---- Telefon/tablet pionowo (≤ 900 px): jeden wiersz paska + hamburger; menu jako panel pod
+   paskiem z pełnymi etykietami i celami 44 px (audyt A14 C19 S9) ---- */
+.tn-burger { display: none; }
+@media (max-width: 900px) {
+  .topnav { flex-wrap: nowrap; }
+  .tn-burger { display: inline-flex; }
+  .topnav .tn-menu { display: none; }
+  .topnav.mobile-open .tn-menu {
+    display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 70;
+    max-height: calc(100dvh - var(--topbar-h, 56px)); overflow: hidden auto;
+    padding: var(--sp-2) var(--sp-3) var(--sp-4); background: var(--chrome);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08); box-shadow: var(--shadow-3);
+  }
+  .topnav.mobile-open .tn-link, .topnav.mobile-open .tn-drop-link {
+    display: flex; align-items: center; gap: 10px; min-height: var(--tap); padding: 0 10px; font-size: 15px;
+  }
+  .topnav.mobile-open .tn-link .tn-label { display: inline; }
+  /* grupy rozwinięte na stałe; przycisk grupy = nagłówek sekcji */
+  .topnav.mobile-open .tn-group-btn {
+    pointer-events: none; margin-top: var(--sp-2); padding: 0 10px; min-height: 28px;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7;
+  }
+  .topnav.mobile-open .tn-group-btn .tn-caret { display: none; }
+  .topnav.mobile-open .tn-menu .tn-drop {
+    display: flex; flex-direction: column; position: static !important;
+    min-width: 0; padding: 0; border: 0; background: none; box-shadow: none;
+  }
+}
+@media (pointer: coarse) { .tn-usermenu .tn-user { min-height: var(--tap); } }

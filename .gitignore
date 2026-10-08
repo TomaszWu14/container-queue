@@ -1,0 +1,44 @@
+__pycache__/
+*.pyc
+*.db
+# sidecary SQLite (journal/WAL/shared-memory) — artefakty testów, nie do repo
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+.env
+.venv/
+node_modules/
+.pytest_cache/
+*.tsbuildinfo
+uploads/
+backups/
+
+.idea/
+
+# build frontendu — generowany (Coolify buduje ze źródeł); nie śledzimy, by nie było konfliktów bundli
+frontend/dist/
+
+# tymczasowe worktree agentów Claude — nie należą do repo (embedded gity)
+.claude/worktrees/
+# pliki biurowe z danymi firmowymi nie wchodza do repo (por. docs/BEZPIECZENSTWO.md)
+*.xlsx
+*.xls
+
+# --- kopia do przygotowania wersji publicznej (wymagane minimum) ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+.idea/
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+*.sql
+*.dump
+*.bak
+.DS_Store
+!backend/scripts/**/*.sql

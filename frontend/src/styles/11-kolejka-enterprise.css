@@ -1,0 +1,209 @@
+/* Kolejka Enterprise — wymiary i kolory 1:1 z makiety (Claude Design, „Kolejka Enterprise").
+   Tokeny aplikacji: --navy-800 z makiety = --chrome; kolory spółek = --wh-acme / --wh-dlt. */
+/* tło CAŁEGO wiersza tabeli wg magazynu (kq-wh-dlt / kq-wh-acme): bardzo jasne, niskonasycone
+   odcienie palety --wh-* (róż Pink Drink, mięta). --text/--muted zachowują ≥4.5:1 także na hoverze
+   (strażnik: styles/queue-row-warehouse.test.ts). Wiersz bez magazynu zostaje biały. */
+:root {
+  /* 2026-09-28 wariant B: mocniej — na części monitorów #fcf0f4/#eef8f2 wyglądały na szare */
+  --kq-row-dlt: #f7d9e3;   --kq-row-dlt-hover: #f5d3df;
+  --kq-row-acme: #cfebd9; --kq-row-acme-hover: #c6e7d2;
+  /* hover wiersza bez magazynu, zaznaczony, aktywny/flash — nieprzezroczyste (przyklejone kolumny) */
+  --kq-row-none-hover: #fafbfd; --kq-row-sel: #f5f8fd; --kq-row-active: #eaf2ff;
+  /* teksty tabeli z własnym kolorem — każdy ma ciemny odpowiednik niżej (strażnik kontrastu j.w.) */
+  --kq-navy: #0a1f33;       /* nr kontenera, posortowany nagłówek (= --chrome) */
+  --kq-warn-ink: #b45309;   /* przesunięte ETA, demurrage „wkrótce" */
+  --kq-late-ink: var(--danger-ink);   /* opóźnienie, demurrage po terminie — #d92d20 miał 4.35:1 na tle wiersza */
+  --kq-line: #c9d2dc;       /* linie między wierszami */
+  --kq-grid: #cfd7e0;       /* pionowe linie komórek */
+}
+/* dark: stonowana tinta nad --panel, nieprzezroczysta (przyklejone kolumny); hover = mocniejsze nasycenie
+   przy tej samej jasności — rozjaśnienie zbiłoby --muted poniżej 4.5:1 */
+:root[data-theme='dark'] {
+  --kq-row-dlt: #26293a;   --kq-row-dlt-hover: #36293d;
+  --kq-row-acme: #1f3035; --kq-row-acme-hover: #1c3432;
+  --kq-row-none-hover: var(--soft); --kq-row-sel: var(--soft); --kq-row-active: var(--accent-soft);
+  /* granatowy numer (#0a1f33) na ciemnym panelu miał 1:1 — jasny odpowiednik ≥7:1 na każdym tle wiersza */
+  --kq-navy: #dbe8f8;
+  --kq-warn-ink: #f5b36b;   --kq-late-ink: #ff8a80;   /* ≥4.5:1 (bursztyn/czerwień jasnego motywu ~3:1) */
+  --kq-line: #263344;
+  --kq-grid: #2c3b4e;
+}
+
+.kq-ct, .kq-table th {
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-strong); font-weight: 600;
+}
+
+/* zakładki widoków (wiersz 2 paska kolejki) */
+.kq-tabs { display: flex; flex-wrap: wrap; margin-bottom: -1px; }
+.kq-tabs button {
+  background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 12px;
+  font: inherit; font-size: 13px; color: var(--muted); cursor: pointer;
+}
+.kq-tabs button.active { border-bottom-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.kq-tab-n {
+  display: inline-block; margin-left: 4px; padding: 0 7px; border-radius: 999px;
+  font-size: 11px; background: var(--soft); color: var(--muted); font-weight: 400;
+}
+.kq-tabs button.active .kq-tab-n { background: var(--accent); color: var(--text-on-fill); }
+/* liczniki widoków w kolorze znaczenia (2026-10-01: pigułki się zlewały) — opóźnione czerwone,
+   demurrage bursztynowe, odprawa niebieska, moje fioletowe; zero = szare; aktywny: obwódka */
+.kq-tabs button .kq-tab-n.v-late { background: var(--danger-bg); color: var(--danger-ink); font-weight: 700; }
+.kq-tabs button .kq-tab-n.v-demurrage { background: var(--warning-bg); color: var(--warning-ink); font-weight: 700; }
+.kq-tabs button .kq-tab-n.v-customs { background: var(--info-bg); color: var(--info-ink); font-weight: 700; }
+.kq-tabs button .kq-tab-n.v-mine { background: var(--st-W_PRODUKCJI-bg); color: var(--st-W_PRODUKCJI-ink); font-weight: 700; }
+.kq-tabs button .kq-tab-n.v-all { background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
+.kq-tabs button .kq-tab-n.zero { background: var(--soft); color: var(--muted); font-weight: 400; }
+.kq-tabs button.active .kq-tab-n:not(.v-all) { box-shadow: inset 0 0 0 1.5px currentColor; }
+.kq-tabs button.active .kq-tab-n.v-all { background: var(--accent); color: var(--text-on-fill); }
+
+/* pasek filtrów */
+.kq-filters {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 18px;
+  background: #fbfcfd; border: 1px solid var(--border); border-top: none;
+}
+.kq-filters .range-stepper { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+/* SegmentedControl w pasku filtrów — kompaktowy (sm) jak w makiecie */
+.kq-filters .seg { border-radius: 8px; }
+.kq-filters .seg button { padding: 4px 10px; font-size: 12px; }
+.kq-filters .step, .kq-filters .week-pick, .kq-filters .btn { font-size: 12px; padding: 3px 8px; min-height: 0; }
+.kq-filters .range-label { font-size: 12px; font-weight: 600; }
+.kq-sep { width: 1px; height: 22px; background: var(--border); }
+.kq-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; border-radius: 999px;
+  background: #eaf2ff; color: #0848c4; border: 1px solid #c7d9ff; font-size: 12px; max-width: 280px;
+}
+.kq-chip-k { color: #5b7bb8; }
+.kq-chip b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kq-chip .chip-x { background: none; border: none; color: #0848c4; cursor: pointer; padding: 0 2px; font-size: 11px; }
+.kq-addfilter { position: relative; }
+.kq-addfilter-btn {
+  border: 1px dashed #b7c2d0; border-radius: 999px; padding: 3px 10px; font-size: 12px;
+  color: var(--muted); background: none; cursor: pointer;
+}
+.kq-clear { background: none; border: none; font-size: 12px; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.kq-grp { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
+.kq-grp-label { font-size: 12px; color: var(--muted); }
+.kq-filter-pop {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 260px;
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-2);
+}
+/* .kq-filter-field = pole bez <label> (grupa przycisków — label kliknąłby pierwszy przycisk) */
+.kq-filter-pop label, .kq-filter-pop .kq-filter-field { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted-strong); }
+.kq-filter-pop label.row { flex-direction: row; align-items: center; gap: 6px; }
+
+/* tabela */
+.kq-scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-top: none; }
+.kq-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.kq-table th {
+  position: sticky; top: 0; z-index: 2; height: 36px; padding: 0 8px; text-align: left;
+  background: #eef2f7; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.kq-table th.sortable { cursor: pointer; user-select: none; }
+.kq-table th.sorted { color: var(--kq-navy); }
+.kq-sort { margin-left: 3px; }
+.kq-table td {
+  height: 38px; padding: 0 8px; border-bottom: 1px solid var(--kq-line);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kq-sel { text-align: center; padding: 0 !important; }
+.kq-flag, .kq-more { text-align: center; padding: 0 !important; }
+.kq-table td, .kq-table th { border-right: 1px solid var(--kq-grid); }   /* siatka pion (wariant B) */
+.kq-row { background: var(--panel); cursor: pointer; }
+.kq-row.kq-wh-dlt { --kq-wh-bg: var(--kq-row-dlt); --kq-wh-hover: var(--kq-row-dlt-hover); --kq-wh-line: var(--wh-dlt-border); }
+.kq-row.kq-wh-acme { --kq-wh-bg: var(--kq-row-acme); --kq-wh-hover: var(--kq-row-acme-hover); --kq-wh-line: var(--wh-acme-border); }
+/* tr. — wygrywa z tłem przyklejonych kolumn (14-…css); nieprzezroczyste, bo pod przyklejonymi przewija się treść */
+tr.kq-row > td { background: var(--kq-wh-bg, var(--kq-row-none, var(--panel))); }   /* --kq-row-none: Administracja → Kolory */
+.kq-row:hover td { background: var(--kq-wh-hover, var(--kq-row-none-hover)); }   /* hover = krok głębiej w odcieniu magazynu */
+.kq-row.selected td { background: var(--kq-row-sel); }
+.kq-row.active td { background: var(--kq-row-active); }
+/* zaznaczony/aktywny wygrywa tłem; magazyn zostaje jako 3px pasek tuż za paskiem etapu */
+.kq-row.selected > td:first-child, .kq-row.active > td:first-child {
+  box-shadow: inset 3px 0 0 var(--stg, transparent), inset 6px 0 0 var(--kq-wh-line, transparent);
+}
+/* pastelowe badge (Odprawiony itd.) na pastelowym wierszu — cienki obrys trzyma ich krawędź */
+.kq-row.kq-wh-dlt .badge, .kq-row.kq-wh-acme .badge { box-shadow: 0 0 0 1px rgba(20, 34, 51, 0.09); }
+.kq-row.dragging { opacity: 0.5; }
+.kq-row.flash td { background: var(--kq-row-active); transition: background 0.4s; }
+.kq-row[draggable='true'] { cursor: grab; }
+.kq-flag-btn { background: none; border: none; cursor: pointer; font-size: 11px; color: #c1c9d4; padding: 0; }
+.kq-flag-btn.late { color: var(--danger); }
+.kq-flag-btn.star { color: #f59e0b; }
+.kq-more-btn { background: none; border: none; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; padding: 4px; }
+.kq-no { display: inline-flex; align-items: center; gap: 4px; }
+.kq-no b { color: var(--kq-navy); font-weight: 500; }
+.kq-sup { font-weight: 500; }
+/* główne dane wiersza (numer, dostawca, statek, daty) = 500; nagłówki kolumn = 600 */
+.kq-table td:is(.kq-c-vessel, .kq-c-eta, .kq-c-notify, .kq-c-etd) { font-weight: 500; }
+.kq-dim { color: var(--muted); }
+.kq-shift { color: var(--kq-warn-ink); }
+.kq-late { color: var(--kq-late-ink); font-weight: 700; }
+.kq-wh { font-weight: 600; }
+.kq-none { color: #a3adbb; }
+.kq-dem { color: var(--muted); }
+.kq-dem.soon { color: var(--kq-warn-ink); font-weight: 700; }
+.kq-dem.over { color: var(--kq-late-ink); font-weight: 700; }
+.kq-table .badge { font-size: 11px; line-height: 18px; height: 20px; padding: 0 7px; white-space: nowrap; }
+.kq-table .multi-cell { display: flex; width: 100%; flex-wrap: nowrap; white-space: nowrap; align-items: flex-start; }
+.kq-table .multi-values { font-family: var(--font-mono); min-width: 0; }
+/* numery od lewej (równo z wierszami jednego numeru), licznik „› N” przy prawej krawędzi;
+   kolumny PO / nr dostaw mają szerokość na pełny numer + ⧉ + licznik (EnterpriseTable, w: 190) */
+.kq-table .multi-more { flex: none; margin-left: auto; padding: 0 6px; }
+/* rozwinięta: ⧉ przy każdym numerze zawsze widoczne (nie tylko po najechaniu na wiersz) */
+.kq-table .multi-cell.open .copy-btn { opacity: 1; }
+.multi-all { display: inline-flex; align-items: center; gap: 2px; margin-top: 2px; font-family: var(--font-sans);
+             font-size: 11px; color: var(--muted); }
+.multi-hit { background: var(--accent-soft); border-radius: 3px; }
+.kq-h-expand {
+  float: right; margin-left: 2px; padding: 0 3px; border: 0; background: none; cursor: pointer;
+  color: var(--muted); font: inherit; font-size: 11px; line-height: 1.4;
+}
+.kq-h-expand[aria-pressed="true"], .kq-h-expand:hover { color: var(--accent-ink); }
+.kq-h-expand:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.kq-fill { display: inline-flex; align-items: center; gap: 6px; }
+.kq-fill s { display: inline-block; width: 38px; height: 5px; border-radius: 999px; background: var(--soft); overflow: hidden; }
+.kq-fill i { display: block; height: 100%; background: var(--accent); }
+.kq-fill i.full { background: #16a34a; }
+.kq-fill small { font-size: 11px; color: var(--muted); }
+.kq-detail > td { height: auto; padding: 0 10px 10px; white-space: normal; background: var(--panel); }
+
+/* nagłówek grupy + sekcja planowania */
+.kq-ghead > td { height: 34px; padding: 0 12px; background: #e9eef4; border-top: 1px solid #e8edf3; border-bottom: 1px solid #e8edf3; }
+.kq-ghead-in { position: sticky; left: 0; display: flex; align-items: center; gap: 9px; }
+.kq-caret { background: none; border: none; cursor: pointer; font-size: 10px; color: var(--muted); padding: 0; }
+.kq-sq { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.kq-gtitle { font-size: 13px; color: var(--text); }
+.kq-gsub { font-size: 12px; color: var(--muted); }
+.kq-gchip {
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px;
+  background: #fff; border: 1px solid var(--border); color: var(--muted);
+}
+.kq-gchip.warn { background: #fdeceb; color: #a01c14; border-color: #f6c9c5; }
+.kq-ghead.today .kq-gtitle { color: var(--accent-ink); }
+.kq-plan > td { height: 26px; padding: 0 12px 0 44px; background: var(--panel); border-bottom: 1px solid var(--kq-line); overflow: visible; }
+.kq-plan-btn { background: none; border: none; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--muted-strong); padding: 0; }
+.kq-plan.plan-potwierdzone .kq-plan-btn { color: var(--good); }
+.kq-group.drop-target .kq-ghead > td { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.kq-empty { padding: 16px 4px; }
+
+/* stopka */
+.kq-foot {
+  display: flex; align-items: center; gap: 16px; height: 30px; padding: 0 14px;
+  background: var(--panel); border: 1px solid var(--border); border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px; font-size: 12px; color: var(--muted);
+}
+.kq-foot b { color: var(--text); }
+/* nazwy ukrytych pustych kolumn — na telefonie (widok kart) zbędne i nie mieszczą się w 30px */
+.kq-foot-hidden { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 639px) { .kq-foot-hidden { display: none; } }
+
+:root[data-theme='dark'] .kq-filters, :root[data-theme='dark'] .kq-table th,
+:root[data-theme='dark'] .kq-ghead > td { background: var(--banner-bg); }
+/* dark: nagłówek grupy — jasne ramki i biały chip (#fff pod jasnym --muted = nieczytelny licznik) */
+:root[data-theme='dark'] .kq-ghead > td { border-color: var(--border); }
+:root[data-theme='dark'] .kq-gchip { background: var(--panel); }
+:root[data-theme='dark'] .kq-gchip.warn { background: #3a1a18; color: var(--kq-late-ink); border-color: #6b2a25; }
+
+/* lista obcięta limitem (audyt DATA-002) */
+.kq-truncated { margin: 6px 0; padding: 6px 10px; border-radius: 6px; font-size: 13px;
+  background: var(--warning-bg); color: var(--warning-ink); }
