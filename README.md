@@ -1,10 +1,14 @@
-> **Projekt portfolio.** Nazwy firm są zamienione na fikcyjne, a dane demo i testowe są syntetyczne.
->
-> Kod udostępniony do wglądu (portfolio), wszelkie prawa zastrzeżone — patrz [`LICENSE`](LICENSE).
-
 # TIMPORYE — system zarządzania kolejką kontenerów
 
 [![ci-backend](https://github.com/TomaszWu14/container-queue/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/TomaszWu14/container-queue/actions/workflows/ci-backend.yml) [![ci-frontend](https://github.com/TomaszWu14/container-queue/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/TomaszWu14/container-queue/actions/workflows/ci-frontend.yml)
+
+![Historia zmian kontenera — kto, kiedy, było → jest, z komentarzem](docs/img/historia-kontenera.png)
+
+**Wspólny system planowania dostaw kontenerów dla działów logistyki kilku spółek, magazynów i spedytorów: od statku, przez odprawę celną, po rampę magazynu.**
+
+> **Projekt portfolio.** Nazwy firm są zamienione na fikcyjne, a dane demo i testowe są syntetyczne.
+>
+> Kod udostępniony do wglądu (portfolio), wszelkie prawa zastrzeżone — patrz [`LICENSE`](LICENSE).
 
 Zastępuje Excela `KOLEJKA KONTENERÓW` wspólnym systemem dla spółek (Borealis, Cobalt Sport,
 Iberia, Acme), magazynów i spedytorów (SPEDALFA, SPEDBETA, Delta Brokers).
@@ -19,6 +23,37 @@ Pełna specyfikacja z wywiadu projektowego: [docs/SPECYFIKACJA.md](docs/SPECYFIK
 | **Stack** | Python 3.12, FastAPI, SQLAlchemy + Alembic, PostgreSQL/SQLite, React + TypeScript (Vite), Playwright, Docker, Coolify. |
 | **Jakość** | ~2100 testów backendu (pytest), ~960 testów frontendu (vitest), testy E2E i wizualne (Playwright), CI na GitHub Actions, skany bezpieczeństwa (Bandit, Trivy, pip-audit). |
 | **Dane** | Wszystkie dane w repo są fikcyjne — m.in. zgłoszenia SAD w testach pochodzą z generatora `backend/tests/fixtures/sad/generate_synthetic.py`. |
+
+## Mój wkład
+
+- **Projekt i implementacja całości** — jestem jedynym autorem: wywiad projektowy i specyfikacja, model danych, API, panel React, testy, CI i wdrożenie.
+- **Backend FastAPI** — ok. 450 tras API: kolejka i kalendarz awizacji, 8 etapów cyklu kontenera, awizacja dwuetapowa z tokenami, zlecenia spedycyjne, import SAD, faktury z OCR, audyt każdego pola.
+- **Skala testów:** ~2100 testów backendu (pytest), ~960 testów frontendu (vitest), E2E i testy wizualne w Playwright.
+- **Bezpieczeństwo i dane:** separacja danych spółek per rola, maskowanie danych osobowych w audycie (RODO), skany Bandit / Trivy / pip-audit w CI.
+
+## Dlaczego ten stack
+
+FastAPI daje typowane API z automatyczną dokumentacją OpenAPI/Swagger, z której korzystają panel, n8n i integracje spedytorów. SQLAlchemy z Alembic pozwala trzymać ten sam model na SQLite lokalnie i w testach oraz na PostgreSQL w produkcji, a migracje są wersjonowane i uruchamiane automatycznie przy starcie obrazu. React + TypeScript (Vite) to panel w trzech językach (PL/EN/PT) serwowany przez backend pod jednym adresem. Docker + Coolify pozwalają wdrożyć to samo on-prem albo na VPS.
+
+## Ograniczenia i co dalej
+
+- **Jedna instancja** — część stanu trzyma się w pamięci procesu; przed skalowaniem na wiele workerów trzeba przejść kontrakt z [`docs/JEDNA-INSTANCJA.md`](docs/JEDNA-INSTANCJA.md).
+- **Otwarte błędy z rejestru** — 7 wpisów w [`BUGS-FOUND.md`](BUGS-FOUND.md) czeka na test lub poprawkę (np. B-001: raport błędów importu SAP bez ochrony przed formułami Excela).
+- **Drobne długi UX** — [`UX_AUDIT.md`](UX_AUDIT.md): daty w formacie ISO w części widoków, modale bez obsługi Esc, ciche `catch` przy ładowaniu słowników.
+- **Zależność od usług zewnętrznych** — śledzenie statków wymaga AIS (aisstream.io), a wysyłka maili konfiguracji Microsoft 365 (Graph).
+- **Dalsza automatyzacja** — lista pomysłów na kolejne etapy w [`docs/pomysly-automatyzacje.md`](docs/pomysly-automatyzacje.md).
+
+## Gdzie zacząć czytać kod
+
+- [`backend/app/avizo_workflow.py`](backend/app/avizo_workflow.py) — awizacja dwuetapowa: jedyne miejsce przejść stanów i jednorazowych tokenów (w bazie tylko hash SHA-256).
+- [`backend/app/planning.py`](backend/app/planning.py) — reguła zamrożenia daty dostawy: ETA z API nie przestawia uzgodnionego terminu.
+- [`backend/app/audit.py`](backend/app/audit.py) — audyt zmian pól z maskowaniem danych osobowych.
+
+Historia commitów została zgnieciona przy przygotowaniu wersji portfolio (anonimizacja).
+
+## Wideo
+
+Wkrótce (YouTube).
 
 ## Korzyści
 
